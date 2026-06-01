@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>SOAP Transcriber</title>
+<style>
+:root {
+  --bg-page:#F0EFE9;--bg-card:#FFFFFF;--bg-field:#F5F4F0;
+  --txt:#1A1A1A;--txt2:#6B6B6B;--txt3:#9B9B9B;
+  --brd:rgba(0,0,0,0.12);--brd2:rgba(0,0,0,0.22);
+  --ff:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;
+  --rad:10px;--rad-lg:14px;
+  --touch-min:52px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow-x:hidden;}
+body{font-family:var(--ff);background:var(--bg-page);padding:env(safe-area-inset-top,0) env(safe-area-inset-right,16px) env(safe-area-inset-bottom,0) env(safe-area-inset-left,16px);}
+.wrap{padding:16px;max-width:780px;margin:0 auto;}
+.card{background:var(--bg-card);border:0.5px solid var(--brd);border-radius:var(--rad-lg);padding:1.25rem 1.5rem;margin-bottom:14px;}
+.label{font-size:12px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.ico{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;border-radius:5px;font-size:12px;font-weight:500;flex-shrink:0;}
+.t-box{min-height:100px;background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);padding:14px 16px;font-size:15px;line-height:1.7;color:var(--txt);white-space:pre-wrap;word-break:break-word;}
+.t-box.empty{color:var(--txt3);font-style:italic;font-size:14px;}
+textarea{width:100%;font-size:14px;line-height:1.7;font-family:var(--ff);color:var(--txt);background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);padding:12px 16px;resize:vertical;min-height:80px;}
+textarea:focus{outline:none;border-color:var(--brd2);}
+textarea::placeholder{color:var(--txt3);font-style:italic;font-size:13px;}
+input[type=password]{width:100%;font-size:14px;padding:12px 14px;border:0.5px solid var(--brd2);border-radius:var(--rad);background:var(--bg-field);font-family:var(--ff);color:var(--txt);}
+.row{display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:8px;}
+.meta{font-size:12px;color:var(--txt3);}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+
+/* Botões — mínimo 52px para toque */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 20px;min-height:var(--touch-min);border:0.5px solid var(--brd2);border-radius:var(--rad);background:transparent;color:var(--txt);font-size:15px;font-weight:500;cursor:pointer;font-family:var(--ff);line-height:1;transition:background .12s,opacity .12s;-webkit-user-select:none;user-select:none;}
+.btn:active{opacity:.65;}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.btn-rec{border-color:#D85A30;color:#D85A30;}
+.btn-rec.on{background:#FAECE7;border-color:#993C1D;color:#993C1D;}
+.btn-dark{background:#1A1A1A;color:#fff;border-color:transparent;}
+.btn-dark:active{opacity:.75;background:#1A1A1A;}
+.btn-blue{border-color:#185FA5;color:#185FA5;}
+.btn-green{border-color:#3B6D11;color:#3B6D11;}
+.btn-purple{border-color:#534AB7;color:#534AB7;}
+
+/* Botão de gravação — grande, central */
+.btn-rec-main{
+  width:100%;min-height:72px;font-size:18px;font-weight:600;
+  border-radius:var(--rad-lg);border-width:1.5px;
+  transition:background .15s,transform .1s;
+}
+.btn-rec-main:active{transform:scale(.98);}
+.btn-rec-main.on{background:#FAECE7;}
+
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.on .dot{animation:pulse 1s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* Barra de status da gravação */
+.rec-status{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);
+  padding:12px 16px;margin-bottom:12px;
+}
+.rec-timer{font-size:22px;font-weight:600;color:var(--txt);font-variant-numeric:tabular-nums;letter-spacing:-.5px;}
+.rec-timer.active{color:#993C1D;}
+
+/* Onda de áudio animada */
+.audio-wave{display:flex;align-items:center;gap:3px;height:24px;}
+.audio-wave span{display:block;width:3px;border-radius:2px;background:#D85A30;height:6px;transition:height .1s;}
+.audio-wave.active span:nth-child(1){animation:wave 0.8s ease-in-out infinite 0s;}
+.audio-wave.active span:nth-child(2){animation:wave 0.8s ease-in-out infinite 0.1s;}
+.audio-wave.active span:nth-child(3){animation:wave 0.8s ease-in-out infinite 0.2s;}
+.audio-wave.active span:nth-child(4){animation:wave 0.8s ease-in-out infinite 0.15s;}
+.audio-wave.active span:nth-child(5){animation:wave 0.8s ease-in-out infinite 0.05s;}
+@keyframes wave{0%,100%{height:4px}50%{height:20px}}
+
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;padding:5px 12px;border-radius:var(--rad);margin-bottom:12px;}
+.idle{background:var(--bg-field);color:var(--txt2);}
+.rec{background:#FAECE7;color:#993C1D;}
+.proc{background:#E6F1FB;color:#185FA5;}
+.done{background:#EAF3DE;color:#3B6D11;}
+.err{background:#FCEBEB;color:#A32D2D;}
+.warn{background:#FAEEDA;color:#412402;border-radius:var(--rad);padding:12px 14px;font-size:14px;line-height:1.6;margin-bottom:10px;}
+.ok{background:#EAF3DE;color:#3B6D11;border-radius:var(--rad);padding:8px 12px;font-size:13px;margin-top:8px;display:none;}
+.err-box{color:#A32D2D;background:#FCEBEB;font-size:14px;padding:12px 16px;border-radius:var(--rad);}
+.toggle-hd{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;min-height:44px;}
+.arrow{font-size:12px;color:var(--txt3);transition:transform .2s;}
+.arrow.open{transform:rotate(180deg);}
+.coll{overflow:hidden;transition:max-height .25s ease;}
+
+/* SOAP */
+.sblock{margin-bottom:16px;}
+.slabel{font-size:13px;font-weight:600;color:var(--txt2);margin-bottom:7px;padding-bottom:6px;border-bottom:0.5px solid var(--brd);display:flex;align-items:center;gap:7px;}
+.sl{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;font-size:12px;font-weight:600;}
+.sl-s{background:#E6F1FB;color:#185FA5;}.sl-o{background:#EAF3DE;color:#3B6D11;}
+.sl-a{background:#FAEEDA;color:#854F0B;}.sl-p{background:#EEEDFE;color:#534AB7;}
+.sl-sc{background:#F3E8FF;color:#6B21A8;}
+.scontent{font-size:14px;line-height:1.8;color:var(--txt);white-space:pre-wrap;word-break:break-word;padding:12px 16px;background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);}
+.sc-item{background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);padding:14px 16px;margin-bottom:8px;}
+.sc-name{font-size:12px;font-weight:500;color:var(--txt2);margin-bottom:4px;}
+.sc-val{font-size:24px;font-weight:600;color:var(--txt);}
+.sc-interp{font-size:13px;color:var(--txt2);margin-top:3px;}
+.sc-detail{font-size:12px;color:var(--txt3);margin-top:5px;line-height:1.55;white-space:pre-wrap;}
+.sc-warn{color:#D85A30;}
+.carta-content{font-size:14px;line-height:1.85;color:var(--txt);white-space:pre-wrap;word-break:break-word;padding:14px 16px;background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);}
+.spin{font-size:14px;color:var(--txt2);padding:10px 0;}
+.spin .d span{animation:blink 1.2s infinite;display:inline-block;}
+.spin .d span:nth-child(2){animation-delay:.2s;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.tpl-btn{font-size:14px;min-height:44px;padding:0 16px;}
+.tpl-btn.active{background:#1A1A1A;color:#fff;border-color:transparent;}
+.tpl-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
+.tpl-scroll::-webkit-scrollbar{display:none;}
+
+/* Transcribing overlay */
+#transcribing-overlay{
+  display:none;position:fixed;inset:0;background:rgba(248,247,243,.92);
+  backdrop-filter:blur(4px);z-index:100;
+  align-items:center;justify-content:center;flex-direction:column;gap:16px;
+}
+#transcribing-overlay.show{display:flex;}
+.overlay-spin{font-size:16px;font-weight:500;color:var(--txt2);}
+.overlay-spinner{width:36px;height:36px;border:3px solid var(--brd);border-top-color:#185FA5;border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Chave de API – dupla */
+.key-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:500px){.key-grid{grid-template-columns:1fr;}}
+.key-row{display:flex;gap:8px;}
+.key-row input{flex:1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- OVERLAY TRANSCREVENDO -->
+<div id="transcribing-overlay">
+  <div class="overlay-spinner"></div>
+  <div class="overlay-spin">Transcrevendo áudio<span class="d"><span>.</span><span>.</span><span>.</span></span></div>
+</div>
+
+<!-- CHAVES DE API -->
+<div id="key-card" class="card" style="border-color:#D85A30;background:#FFFAF8">
+  <div class="label"><span class="ico" style="background:#FAECE7;color:#D85A30;">🔑</span>Chaves de API</div>
+  <div style="font-size:13px;color:var(--txt2);margin-bottom:12px;line-height:1.5">
+    Necessário para uso fora do Claude.ai.<br>
+    Anthropic: <a href="https://console.anthropic.com" target="_blank" style="color:#185FA5">console.anthropic.com</a> &nbsp;·&nbsp;
+    OpenAI (Whisper): <a href="https://platform.openai.com/api-keys" target="_blank" style="color:#185FA5">platform.openai.com</a>
+  </div>
+  <div class="key-grid">
+    <div>
+      <div style="font-size:11px;color:var(--txt3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Anthropic (SOAP)</div>
+      <div class="key-row">
+        <input type="password" id="apikey" placeholder="sk-ant-...">
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--txt3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">OpenAI (Whisper)</div>
+      <div class="key-row">
+        <input type="password" id="openaikey" placeholder="sk-...">
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:10px">
+    <button class="btn btn-dark" onclick="saveKeys()" style="min-height:48px;font-size:15px;padding:0 24px">Salvar chaves</button>
+  </div>
+  <div id="key-ok" class="ok">✓ Chaves salvas</div>
+</div>
+
+<!-- GRAVAÇÃO -->
+<div class="card">
+  <div class="label"><span class="ico" style="background:#E6F1FB;color:#185FA5;">🎙</span>Gravação da consulta</div>
+
+  <div id="mic-warn" class="warn" style="display:none">
+    ⚠️ <strong>Microfone não autorizado.</strong> Verifique as permissões do navegador nas Configurações do iPad → Safari → Microfone.
+  </div>
+
+  <!-- Status + timer -->
+  <div class="rec-status">
+    <div>
+      <div class="badge idle" id="badge" style="margin-bottom:0"><div class="dot"></div><span id="btext">Pronto para gravar</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="audio-wave" id="audio-wave">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="rec-timer" id="rec-timer">00:00</div>
+    </div>
+  </div>
+
+  <!-- Botão principal de gravação -->
+  <button class="btn btn-rec btn-rec-main" id="rbtn" onclick="toggleRec()">
+    <div class="dot"></div><span id="rlabel">Iniciar Gravação</span>
+  </button>
+
+  <div style="font-size:12px;color:var(--txt3);text-align:center;margin-top:8px">
+    Grave a consulta → toque novamente para parar → Whisper transcreve automaticamente
+  </div>
+
+  <!-- Transcrição -->
+  <div style="margin-top:16px">
+    <div style="font-size:11px;color:var(--txt3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">📝 Transcrição</div>
+    <div id="t-display" class="t-box empty">A transcrição aparecerá aqui após parar a gravação...</div>
+  </div>
+
+  <!-- Correções manuais -->
+  <div style="margin-top:12px">
+    <div style="font-size:11px;color:var(--txt3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">✏️ Correções e complementos (opcional)</div>
+    <textarea id="t-edit" placeholder="Corrija ou complemente o texto transcrito..." oninput="syncEdit()"></textarea>
+  </div>
+
+  <div class="row">
+    <span class="meta" id="chars"></span>
+    <span class="meta" id="mic-status"></span>
+  </div>
+
+  <div class="actions">
+    <button class="btn" id="clrbtn" onclick="clearAll()" disabled>Limpar</button>
+    <button class="btn btn-dark" id="soapbtn" onclick="doSOAP()" disabled style="flex:1">Gerar SOAP ↗</button>
+  </div>
+</div>
+
+<!-- TEMPLATE EXAME FÍSICO -->
+<div class="card">
+  <div class="label"><span class="ico" style="background:#F3E8FF;color:#6B21A8;">📋</span>Template do exame físico</div>
+  <div style="font-size:13px;color:var(--txt2);margin-bottom:10px">Selecione o template. A IA complementará conforme o caso clínico.</div>
+  <div class="tpl-scroll" id="tpl-btns">
+    <button class="btn tpl-btn active" onclick="selectTpl(0)">Normal</button>
+    <button class="btn tpl-btn" onclick="selectTpl(1)">Amigdalite</button>
+    <button class="btn tpl-btn" onclick="selectTpl(2)">OMA</button>
+    <button class="btn tpl-btn" onclick="selectTpl(3)">Neurológico</button>
+    <button class="btn tpl-btn" onclick="selectTpl(4)">Trauma</button>
+    <button class="btn tpl-btn" onclick="selectTpl(5)">Alergia</button>
+  </div>
+  <div id="tpl-preview" style="margin-top:10px;font-size:13px;color:var(--txt2);background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);padding:12px 16px;white-space:pre-line;line-height:1.7"></div>
+</div>
+
+<!-- INFORMAÇÕES ADICIONAIS -->
+<div class="card">
+  <div class="toggle-hd" onclick="toggleExtra()">
+    <div class="label" style="margin:0"><span class="ico" style="background:#EAF3DE;color:#3B6D11;">+</span>Informações adicionais</div>
+    <span class="arrow" id="extra-arrow">▼</span>
+  </div>
+  <div class="coll" id="extra-body" style="max-height:0">
+    <div style="margin-top:12px">
+      <div style="font-size:13px;color:var(--txt2);margin-bottom:8px;line-height:1.5">Sinais vitais, exames laboratoriais, medicamentos ou complementos ao exame físico:</div>
+      <textarea id="extra" placeholder="Ex: PA 130x80, FC 88bpm, Tax 37.8°C. Prescrito Amoxicilina 500mg 8/8h 7 dias." oninput="updateBtn()"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- SOAP -->
+<div class="card" id="soap-card" style="display:none">
+  <div class="label"><span class="ico" style="background:#EEEDFE;color:#534AB7;">⚕</span>Evolução SOAP</div>
+  <div class="spin" id="soap-spin" style="display:none">Gerando<span class="d"><span>.</span><span>.</span><span>.</span></span></div>
+  <div id="soap-out"></div>
+  <div class="actions" id="soap-acts" style="display:none">
+    <button class="btn" onclick="copySOAP()">Copiar SOAP</button>
+    <button class="btn btn-green" onclick="dlTxt()">📄 Baixar .txt</button>
+    <button class="btn btn-blue" onclick="doCard()">Carta ao paciente</button>
+    <button class="btn btn-purple" onclick="doUBS()">Carta para UBS</button>
+    <button class="btn" onclick="clearAll()">Nova consulta</button>
+  </div>
+</div>
+
+<!-- CARTA PACIENTE -->
+<div class="card" id="carta-card" style="display:none">
+  <div class="label"><span class="ico" style="background:#FAEEDA;color:#854F0B;">✉</span>Carta ao paciente</div>
+  <div class="spin" id="carta-spin" style="display:none">Gerando<span class="d"><span>.</span><span>.</span><span>.</span></span></div>
+  <div id="carta-out"></div>
+  <div class="actions" id="carta-acts" style="display:none">
+    <button class="btn btn-blue" onclick="dlDocx('carta')">Baixar .docx</button>
+  </div>
+</div>
+
+<!-- CARTA UBS -->
+<div class="card" id="ubs-card" style="display:none">
+  <div class="label"><span class="ico" style="background:#EEEDFE;color:#534AB7;">🏥</span>Carta para a UBS</div>
+  <div class="spin" id="ubs-spin" style="display:none">Gerando<span class="d"><span>.</span><span>.</span><span>.</span></span></div>
+  <div id="ubs-out"></div>
+  <div class="actions" id="ubs-acts" style="display:none">
+    <button class="btn btn-purple" onclick="dlDocx('ubs')">Baixar .docx</button>
+    <button class="btn btn-green" onclick="dlUBSTxt()">📄 Baixar .txt</button>
+  </div>
+</div>
+
+</div><!-- .wrap -->
+
+<script src="https://unpkg.com/docx@9/build/index.js"></script>
+<script>
+'use strict';
+
+// ─── STATE ────────────────────────────────────────────────────────────────
+let mediaRecorder = null;
+let audioChunks = [];
+let isRec = false;
+let timerInterval = null;
+let timerSeconds = 0;
+let transcribedText = '';
+let soapData = {}, cartaData = null, ubsData = null;
+let extraOpen = false;
+
+const ts = () => new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})
+           + ' — ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+const isoDate = () => new Date().toISOString().slice(0,10);
+
+// ─── CHAVES ───────────────────────────────────────────────────────────────
+function saveKeys() {
+  const ant = document.getElementById('apikey').value.trim();
+  const oai = document.getElementById('openaikey').value.trim();
+  if (!ant && !oai) { alert('Cole pelo menos uma chave.'); return; }
+  if (ant) localStorage.setItem('soap_anthropic_key', ant);
+  if (oai) localStorage.setItem('soap_openai_key', oai);
+  document.getElementById('key-ok').style.display = 'block';
+  setTimeout(() => document.getElementById('key-card').style.display = 'none', 1500);
+}
+
+function getAnthropicKey() {
+  return document.getElementById('apikey').value.trim() || localStorage.getItem('soap_anthropic_key') || undefined;
+}
+function getOpenAIKey() {
+  return document.getElementById('openaikey').value.trim() || localStorage.getItem('soap_openai_key') || undefined;
+}
+
+// Restaurar chaves salvas
+window.addEventListener('DOMContentLoaded', () => {
+  const ant = localStorage.getItem('soap_anthropic_key');
+  const oai = localStorage.getItem('soap_openai_key');
+  if (ant) document.getElementById('apikey').value = ant;
+  if (oai) document.getElementById('openaikey').value = oai;
+  if (ant || oai) {
+    document.getElementById('key-ok').style.display = 'block';
+    document.getElementById('key-ok').textContent = '✓ Chaves carregadas';
+    setTimeout(() => document.getElementById('key-card').style.display = 'none', 1200);
+  }
+  initTpl();
+  toggleExtra();
+});
+
+// ─── TIMER ────────────────────────────────────────────────────────────────
+function startTimer() {
+  timerSeconds = 0;
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+    updateTimerDisplay();
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+}
+
+function updateTimerDisplay() {
+  const m = String(Math.floor(timerSeconds / 60)).padStart(2,'0');
+  const s = String(timerSeconds % 60).padStart(2,'0');
+  const el = document.getElementById('rec-timer');
+  el.textContent = m + ':' + s;
+  el.className = 'rec-timer' + (isRec ? ' active' : '');
+}
+
+// ─── GRAVAÇÃO ─────────────────────────────────────────────────────────────
+async function toggleRec() {
+  if (!isRec) {
+    await startRec();
+  } else {
+    await stopRec();
+  }
+}
+
+async function startRec() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    document.getElementById('mic-status').textContent = '🟢 Microfone ativo';
+
+    // Determinar formato suportado
+    const mimeType = getSupportedMimeType();
+    const options = mimeType ? { mimeType } : {};
+
+    mediaRecorder = new MediaRecorder(stream, options);
+    audioChunks = [];
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunks.push(e.data);
+    };
+
+    mediaRecorder.start(1000); // chunk a cada 1s
+    isRec = true;
+
+    // UI
+    const btn = document.getElementById('rbtn');
+    btn.className = 'btn btn-rec btn-rec-main on';
+    document.getElementById('rlabel').textContent = 'Parar Gravação';
+    setBadge('rec','Gravando...');
+    document.getElementById('audio-wave').classList.add('active');
+    startTimer();
+
+  } catch(e) {
+    document.getElementById('mic-warn').style.display = 'block';
+    document.getElementById('mic-status').textContent = '🔴 Microfone bloqueado';
+    setBadge('err','Microfone bloqueado');
+  }
+}
+
+async function stopRec() {
+  if (!mediaRecorder) return;
+  isRec = false;
+
+  // UI imediato
+  const btn = document.getElementById('rbtn');
+  btn.className = 'btn btn-rec btn-rec-main';
+  document.getElementById('rlabel').textContent = 'Iniciar Gravação';
+  setBadge('proc','Transcrevendo...');
+  document.getElementById('audio-wave').classList.remove('active');
+  stopTimer();
+  btn.disabled = true;
+
+  // Para gravação e aguarda dados
+  await new Promise(resolve => {
+    mediaRecorder.onstop = resolve;
+    mediaRecorder.stop();
+    // Para as tracks do microfone
+    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+  });
+
+  // Transcreve via Whisper
+  document.getElementById('transcribing-overlay').classList.add('show');
+  try {
+    const blob = new Blob(audioChunks, { type: audioChunks[0]?.type || 'audio/webm' });
+    transcribedText = await transcribeWhisper(blob);
+    renderTranscript(transcribedText);
+    setBadge('done','Transcrição concluída');
+    document.getElementById('mic-status').textContent = '✓ Transcrito';
+  } catch(e) {
+    setBadge('err','Erro na transcrição');
+    const el = document.getElementById('t-display');
+    el.classList.remove('empty');
+    el.innerHTML = '<span style="color:#A32D2D">Erro ao transcrever: ' + esc(e.message) + '</span>';
+    document.getElementById('mic-status').textContent = '🔴 Erro';
+  }
+
+  document.getElementById('transcribing-overlay').classList.remove('show');
+  btn.disabled = false;
+  mediaRecorder = null;
+}
+
+function getSupportedMimeType() {
+  const types = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/ogg;codecs=opus',
+    'audio/ogg',
+  ];
+  for (const t of types) {
+    if (MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return null;
+}
+
+// ─── WHISPER ──────────────────────────────────────────────────────────────
+async function transcribeWhisper(audioBlob) {
+  const key = getOpenAIKey();
+  if (!key) throw new Error('Chave OpenAI não configurada. Adicione sua chave no campo acima.');
+
+  const formData = new FormData();
+  // Whisper aceita: flac, m4a, mp3, mp4, mpeg, mpga, oga, ogg, wav, webm
+  const ext = audioBlob.type.includes('mp4') ? 'mp4'
+             : audioBlob.type.includes('ogg') ? 'ogg'
+             : 'webm';
+  formData.append('file', audioBlob, 'audio.' + ext);
+  formData.append('model', 'whisper-1');
+  formData.append('language', 'pt');
+  formData.append('response_format', 'text');
+
+  const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + key },
+    body: formData
+  });
+
+  if (!r.ok) {
+    const errText = await r.text();
+    throw new Error('Whisper API ' + r.status + ': ' + errText.slice(0,200));
+  }
+
+  const text = await r.text();
+  return text.trim();
+}
+
+// ─── RENDER TRANSCRIPT ────────────────────────────────────────────────────
+function renderTranscript(text) {
+  const el = document.getElementById('t-display');
+  if (text && text.trim()) {
+    el.classList.remove('empty');
+    el.textContent = text;
+  } else {
+    el.classList.add('empty');
+    el.textContent = 'A transcrição aparecerá aqui após parar a gravação...';
+  }
+  updateBtn();
+}
+
+function syncEdit() { updateBtn(); }
+
+function getFullText() {
+  const auto = transcribedText.trim();
+  const manual = document.getElementById('t-edit').value.trim();
+  if (auto && manual) return auto + '\n\n' + manual;
+  return auto || manual;
+}
+
+function updateBtn() {
+  const n = getFullText().length;
+  const extra = document.getElementById('extra').value.trim();
+  document.getElementById('chars').textContent = n ? n + ' caracteres' : '';
+  document.getElementById('soapbtn').disabled = n < 10 && !extra;
+  document.getElementById('clrbtn').disabled = !n && !extra && !transcribedText;
+}
+
+function clearAll() {
+  transcribedText = '';
+  document.getElementById('t-edit').value = '';
+  document.getElementById('extra').value = '';
+  renderTranscript('');
+  updateBtn();
+  setBadge('idle','Pronto para gravar');
+  document.getElementById('mic-status').textContent = '';
+  document.getElementById('rec-timer').textContent = '00:00';
+  document.getElementById('rec-timer').className = 'rec-timer';
+  ['soap-card','carta-card','ubs-card'].forEach(id =>
+    document.getElementById(id).style.display = 'none');
+  soapData = {}; cartaData = null; ubsData = null;
+}
+
+// ─── TEMPLATES ────────────────────────────────────────────────────────────
+const TPL_NAMES = ['Normal','Amigdalite','OMA','Neurológico','Trauma','Alergia'];
+const TEMPLATES = [
+`- EFG: BEG, corado, hidratado, anictérico, eupneico em AA.
+- NEURO: LOTE, pupilas isocóricas e fotorreagentes, ausência de déficits focais, sem sinais de irritação meníngea.
+- AR: MVBD sem RA.
+- ACV: BRNF em 2T, sem sopros.
+- ABDOME: Flácido, indolor à palpação, sem sinais de IP. Blumberg negativo. Rovsing negativo. Murphy negativo.
+- EXTREMIDADES: Bem perfundidas, sem edemas.
+- OROSCOPIA, OTOSCOPIA E RINOSCOPIA: Sem particularidades.`,
+
+`- EFG: BEG, corado, hidratado, anictérico, eupneico em AA.
+- NEURO: LOTE, pupilas isocóricas e fotorreagentes, ausência de déficits focais, sem sinais de irritação meníngea.
+- AR: MVBD sem RA.
+- ACV: BRNF em 2T, sem sopros.
+- ABDOME: Flácido, indolor à palpação, sem sinais de IP. Blumberg negativo. Rovsing negativo. Murphy negativo.
+- EXTREMIDADES: Bem perfundidas, sem edemas.
+- OROSCOPIA: Presença de hipertrofia, hiperemia e exsudato de amígdala.
+- OTOSCOPIA E RINOSCOPIA: Sem particularidades.`,
+
+`- EFG: BEG, corado, hidratado, anictérico, eupneico em AA.
+- NEURO: LOTE, pupilas isocóricas e fotorreagentes, ausência de déficits focais, sem sinais de irritação meníngea.
+- AR: MVBD sem RA.
+- ACV: BRNF em 2T, sem sopros.
+- ABDOME: Flácido, indolor à palpação, sem sinais de IP. Blumberg negativo. Rovsing negativo. Murphy negativo.
+- EXTREMIDADES: Bem perfundidas, sem edemas.
+- OROSCOPIA E RINOSCOPIA: Sem particularidades.
+- OTOSCOPIA: MT opaca e abaulada.`,
+
+`- EFG: BEG, corado, hidratado, anictérico, eupneico em AA.
+- NEURO: LOTE, pupilas isocóricas e fotorreagentes, ausência de déficits focais, sem sinais de irritação meníngea. Skew negativo. Romberg negativo. Head Impulse negativo. Nariz-Índex negativo.
+- AR: MVBD sem RA.
+- ACV: BRNF em 2T, sem sopros.
+- ABDOME: Flácido, indolor à palpação, sem sinais de IP. Blumberg negativo. Rovsing negativo. Murphy negativo.
+- EXTREMIDADES: Bem perfundidas, sem edemas.`,
+
+`- EFG: BEG, corado, hidratado, anictérico, eupneico em AA.
+- NEURO: LOTE, pupilas isocóricas e fotorreagentes, ausência de déficits focais, sem sinais de irritação meníngea.
+- AR: MVBD sem RA.
+- ACV: BRNF em 2T, sem sopros.
+- ABDOME: Flácido, indolor à palpação, sem sinais de IP. Blumberg negativo. Rovsing negativo. Murphy negativo.
+- EXTREMIDADES: Bem perfundidas, sem edemas. Local do trauma sem crepitação óssea, sem desvio de linha média. Com dor à palpação local e à movimentação ativa e passiva.`,
+
+`- EFG: BEG, corado, hidratado, anictérico, eupneico em AA.
+- NEURO: LOTE, pupilas isocóricas e fotorreagentes, ausência de déficits focais, sem sinais de irritação meníngea.
+- AR: MVBD sem RA.
+- ACV: BRNF em 2T, sem sopros.
+- ABDOME: Flácido, indolor à palpação, sem sinais de IP. Blumberg negativo. Rovsing negativo. Murphy negativo.
+- EXTREMIDADES: Bem perfundidas, sem edemas.
+- PELE: Presença de pápulas eritematosas, pruriginosas.`
+];
+
+let selectedTpl = 0;
+
+function selectTpl(idx) {
+  selectedTpl = idx;
+  document.querySelectorAll('.tpl-btn').forEach((b,i) => {
+    b.classList.toggle('active', i === idx);
+  });
+  document.getElementById('tpl-preview').textContent = TEMPLATES[idx];
+}
+
+function initTpl() {
+  document.getElementById('tpl-preview').textContent = TEMPLATES[0];
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function setBadge(type, txt) {
+  document.getElementById('badge').className = 'badge ' + type;
+  document.getElementById('btext').textContent = txt;
+}
+
+function toggleExtra() {
+  extraOpen = !extraOpen;
+  document.getElementById('extra-body').style.maxHeight = extraOpen ? '400px' : '0';
+  document.getElementById('extra-arrow').className = 'arrow' + (extraOpen ? ' open' : '');
+}
+
+// ─── API CLAUDE ───────────────────────────────────────────────────────────
+function parseJSON(raw) {
+  let s = raw.trim()
+    .replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,'').trim();
+  const a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if (a !== -1 && b > a) s = s.slice(a, b+1);
+  return JSON.parse(s);
+}
+
+async function callAI(prompt, maxTok = 2500) {
+  const key = getAnthropicKey();
+  const headers = { 'Content-Type':'application/json', 'anthropic-version':'2023-06-01' };
+  if (key) { headers['x-api-key'] = key; headers['anthropic-dangerous-direct-browser-access'] = 'true'; }
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST', headers,
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: maxTok,
+          messages: [{ role:'user', content: prompt }]
+        })
+      });
+      if (!r.ok) throw new Error('API ' + r.status + ': ' + (await r.text()).slice(0,250));
+      const d = await r.json();
+      return parseJSON(d.content.map(b => b.text||'').join(''));
+    } catch(e) {
+      if (attempt === 2) throw e;
+      await new Promise(r => setTimeout(r, 1000 * (attempt+1)));
+    }
+  }
+}
+
+// ─── SOAP ─────────────────────────────────────────────────────────────────
+function buildSOAPPrompt(transcript, extra) {
+  const eb = extra ? '\nINFORMAÇÕES ADICIONAIS:\n"""\n'+extra+'\n"""' : '';
+  return `Você é assistente médico de Pronto-Socorro brasileiro. Gere evolução SOAP.
+Responda SOMENTE JSON válido sem markdown. Chaves: "S","O","A","P","scores".
+
+S — SUBJETIVO: queixa + HDA completa. Não resumir.
+  Se alergias/comorbidades/medicamentos contínuos não mencionados → afirme negativa.
+
+O — OBJETIVO:
+  USE OBRIGATORIAMENTE o template de exame físico abaixo como base da seção O.
+  Complemente com dados das INFORMAÇÕES ADICIONAIS e da transcrição quando houver.
+  Se a IA identificar achados relevantes ao caso não cobertos pelo template, adicione-os.
+  Mantenha EXATAMENTE o formato "-" por linha, em português normal sem CAPS LOCK.
+
+TEMPLATE DE EXAME FÍSICO SELECIONADO (${TPL_NAMES[selectedTpl]}):
+${TEMPLATES[selectedTpl]}
+${extra ? '\nINFORMAÇÕES ADICIONAIS (complementam o template acima):\n"""\n'+extra+'\n"""' : ''}
+
+A — AVALIAÇÃO: hipótese = EXATAMENTE o que o médico disse. CID-10. Formato: lista "-".
+
+P — PLANO:
+  FORMATO OBRIGATÓRIO: cada item em linha própria iniciada por "-", em português normal.
+  Estruture nesta ordem quando aplicável:
+  1. Medicamentos prescritos (SOMENTE os mencionados pelo médico — se nenhum, omita esta parte)
+  2. Orientações não-farmacológicas pertinentes: repouso, hidratação, dieta, higiene, lavagem nasal, compressa, etc.
+  3. Exames solicitados (somente se mencionados)
+  4. Retorno / seguimento (somente se mencionado)
+  5. Último item SEMPRE: "- Paciente orientado(a) quanto aos sinais de alerta e fatores de retorno imediato ao Pronto-Socorro. Foram fornecidas orientações verbais e por escrito sobre mudanças de hábitos de vida e uso correto das medicações prescritas. Todas as dúvidas foram sanadas durante o atendimento."
+
+SCORES: calcule aplicáveis. Se nenhum: [].
+  Formato: [{"nome":"","valor":"","interpretacao":"","componentes":"","dadosFaltantes":""}]
+
+TRANSCRIÇÃO:
+"""
+${transcript}
+"""${eb}
+
+JSON: {"S":"...","O":"...","A":"...","P":"...","scores":[...]}`;
+}
+
+async function doSOAP() {
+  const transcript = getFullText();
+  const extra = document.getElementById('extra').value.trim();
+  if (!transcript && !extra) return;
+
+  show('soap-card');
+  spin('soap-spin', true);
+  document.getElementById('soap-out').innerHTML = '';
+  document.getElementById('soap-acts').style.display = 'none';
+  hide('carta-card'); hide('ubs-card');
+  setBadge('proc','Gerando SOAP...');
+  document.getElementById('soap-card').scrollIntoView({behavior:'smooth',block:'start'});
+
+  try {
+    soapData = await callAI(buildSOAPPrompt(transcript, extra));
+    renderSOAP(soapData);
+    setBadge('done','Evolução gerada');
+  } catch(e) {
+    document.getElementById('soap-out').innerHTML =
+      '<div class="err-box">Erro: ' + esc(e.message) +
+      '<br><button class="btn" style="margin-top:10px" onclick="doSOAP()">Tentar novamente ↗</button></div>';
+    setBadge('err','Erro');
+  }
+  spin('soap-spin', false);
+  document.getElementById('soap-acts').style.display = 'flex';
+}
+
+function renderSOAP(s) {
+  const secs = [
+    {k:'S',l:'Subjetivo',c:'sl-s'},
+    {k:'O',l:'Objetivo',c:'sl-o'},
+    {k:'A',l:'Avaliação',c:'sl-a'},
+    {k:'P',l:'Plano',c:'sl-p'}
+  ];
+  let html = secs.filter(x=>s[x.k]).map(x =>
+    `<div class="sblock">
+      <div class="slabel"><span class="sl ${x.c}">${x.k}</span>${x.l}</div>
+      <div class="scontent">${esc(s[x.k])}</div>
+    </div>`).join('');
+
+  if (s.scores && s.scores.length) {
+    html += `<div class="sblock">
+      <div class="slabel"><span class="sl sl-sc">★</span>Scores clínicos</div>
+      ${s.scores.map(sc =>
+        `<div class="sc-item">
+          <div class="sc-name">${esc(sc.nome)}</div>
+          <div class="sc-val">${esc(sc.valor)}</div>
+          <div class="sc-interp">${esc(sc.interpretacao)}</div>
+          ${sc.componentes ? '<div class="sc-detail">'+esc(sc.componentes)+'</div>' : ''}
+          ${sc.dadosFaltantes ? '<div class="sc-detail sc-warn">⚠ '+esc(sc.dadosFaltantes)+'</div>' : ''}
+        </div>`).join('')}
+    </div>`;
+  }
+  document.getElementById('soap-out').innerHTML = html;
+}
+
+// ─── COPIAR & TXT ─────────────────────────────────────────────────────────
+function copySOAP() {
+  const lbs = {S:'SUBJETIVO',O:'OBJETIVO',A:'AVALIAÇÃO',P:'PLANO'};
+  let txt = ['S','O','A','P'].map(k => soapData[k] ? lbs[k]+':\n'+soapData[k] : '').filter(Boolean).join('\n\n');
+  if (soapData.scores && soapData.scores.length)
+    txt += '\n\nSCORES:\n' + soapData.scores.map(sc => sc.nome+': '+sc.valor+' — '+sc.interpretacao).join('\n');
+  navigator.clipboard.writeText(txt).then(() => {
+    const b = document.querySelector('#soap-acts button');
+    const orig = b.textContent;
+    b.textContent = 'Copiado!'; setTimeout(() => b.textContent = orig, 2000);
+  });
+}
+
+function dlTxt() {
+  if (!Object.keys(soapData).length) return;
+  const lbs = {S:'SUBJETIVO',O:'OBJETIVO',A:'AVALIAÇÃO',P:'PLANO'};
+  let txt = 'DATA/HORA: ' + ts() + '\n' + '─'.repeat(40) + '\n\n';
+  ['S','O','A','P'].forEach(k => { if (soapData[k]) txt += lbs[k]+':\n'+soapData[k]+'\n\n'; });
+  if (soapData.scores && soapData.scores.length) {
+    txt += 'SCORES CLÍNICOS:\n';
+    soapData.scores.forEach(sc => {
+      txt += '\n'+sc.nome+': '+sc.valor+' — '+sc.interpretacao+'\n';
+      if (sc.componentes) txt += sc.componentes+'\n';
+      if (sc.dadosFaltantes) txt += '⚠ '+sc.dadosFaltantes+'\n';
+    });
+  }
+  download(txt, 'evolucao-soap-'+isoDate()+'.txt', 'text/plain;charset=utf-8');
+}
+
+// ─── CARTA PACIENTE ───────────────────────────────────────────────────────
+async function doCard() {
+  const transcript = getFullText();
+  const extra = document.getElementById('extra').value.trim();
+  show('carta-card');
+  spin('carta-spin', true);
+  document.getElementById('carta-out').innerHTML = '';
+  document.getElementById('carta-acts').style.display = 'none';
+  document.getElementById('carta-card').scrollIntoView({behavior:'smooth',block:'start'});
+  try {
+    cartaData = await callAI(`Gere carta ao paciente em linguagem simples. SOMENTE JSON:
+{"diagnostico":"","orientacoes":[""],"medicamentos":[""],"sinaisAlerta":[""],"retorno":""}
+Medicamentos: inclua SOMENTE os mencionados pelo médico. Se nenhum → [].
+Transcrição:"""${transcript}""" Extra:"""${extra}"""`, 1200);
+    renderCarta(cartaData);
+  } catch(e) {
+    document.getElementById('carta-out').innerHTML =
+      '<div class="err-box">Erro: '+esc(e.message)+'<br><button class="btn" style="margin-top:10px" onclick="doCard()">Tentar novamente</button></div>';
+  }
+  spin('carta-spin', false);
+  document.getElementById('carta-acts').style.display = 'flex';
+}
+
+function renderCarta(c) {
+  let h = '<div class="carta-content"><strong>Diagnóstico:</strong> '+esc(c.diagnostico)+'\n\n';
+  if (c.orientacoes&&c.orientacoes.length) h += '<strong>Orientações:</strong>\n'+c.orientacoes.map(x=>'• '+esc(x)).join('\n')+'\n\n';
+  if (c.medicamentos&&c.medicamentos.length) h += '<strong>Medicamentos:</strong>\n'+c.medicamentos.map(x=>'• '+esc(x)).join('\n')+'\n\n';
+  if (c.sinaisAlerta&&c.sinaisAlerta.length) h += '<strong>Sinais de alerta — volte ao PS se:</strong>\n'+c.sinaisAlerta.map(x=>'• '+esc(x)).join('\n')+'\n\n';
+  if (c.retorno) h += '<strong>Retorno:</strong> '+esc(c.retorno)+'\n\n';
+  h += '<strong>Data:</strong> '+hoje+'</div>';
+  document.getElementById('carta-out').innerHTML = h;
+}
+
+// ─── CARTA UBS ────────────────────────────────────────────────────────────
+async function doUBS() {
+  const transcript = getFullText();
+  const extra = document.getElementById('extra').value.trim();
+  show('ubs-card');
+  spin('ubs-spin', true);
+  document.getElementById('ubs-out').innerHTML = '';
+  document.getElementById('ubs-acts').style.display = 'none';
+  document.getElementById('ubs-card').scrollIntoView({behavior:'smooth',block:'start'});
+  try {
+    const soapCtx = Object.keys(soapData).length
+      ? `SUBJETIVO: ${soapData.S||''}\nOBJETIVO: ${soapData.O||''}\nAVALIAÇÃO: ${soapData.A||''}\nPLANO: ${soapData.P||''}`
+      : `Transcrição: """${transcript}"""\nInformações adicionais: """${extra}"""`;
+
+    ubsData = await callAI(`Você é um assistente médico especializado em documentação clínica e contrarreferência para a Atenção Primária à Saúde (SUS). Transforme os dados do atendimento em uma carta de encaminhamento formal, ética e técnica para a UBS.
+
+Diretrizes:
+- Tom profissional, respeitoso e colaborativo (de colega médico para colega médico)
+- Traduza termos curtos de prontuário em frases médicas completas
+- Foque na continuidade do cuidado
+- Classifique a prioridade do seguimento: Rotina, Prioritário ou Urgente
+
+Responda SOMENTE JSON válido:
+{
+  "paciente": "Nome se disponível, caso contrário deixe em branco",
+  "dataAtendimento": "${hoje}",
+  "prioridade": "Rotina|Prioritário|Urgente",
+  "resumoClinico": "Síntese do subjetivo e objetivo em texto corrido, frases completas",
+  "impressaoDiagnostica": ["lista de hipóteses com CID-10"],
+  "condutaRealizada": ["lista do que foi feito no PS: medicações, exames, orientações"],
+  "solicitacaoUBS": ["lista de sugestões de seguimento, exames a solicitar, monitoramento, revisão de receitas etc."]
+}
+
+DADOS DO ATENDIMENTO:
+${soapCtx}`, 1800);
+    renderUBS(ubsData);
+  } catch(e) {
+    document.getElementById('ubs-out').innerHTML =
+      '<div class="err-box">Erro: '+esc(e.message)+'<br><button class="btn" style="margin-top:10px" onclick="doUBS()">Tentar novamente</button></div>';
+  }
+  spin('ubs-spin', false);
+  document.getElementById('ubs-acts').style.display = 'flex';
+}
+
+function renderUBS(u) {
+  const pCor = {Urgente:'#A32D2D', Prioritário:'#854F0B', Rotina:'#3B6D11'};
+  const pBg  = {Urgente:'#FCEBEB', Prioritário:'#FAEEDA', Rotina:'#EAF3DE'};
+  const pr = u.prioridade || 'Rotina';
+
+  let h = '<div class="carta-content">';
+  h += `<div style="text-align:center;margin-bottom:16px">
+    <div style="font-size:15px;font-weight:600;color:#1F4E79">ENCAMINHAMENTO / CONTRARREFERÊNCIA</div>
+    <div style="font-size:13px;color:var(--txt2);margin-top:4px">À Equipe de Saúde da Família / Unidade Básica de Saúde</div>
+  </div>`;
+  h += `<div style="background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);padding:10px 16px;margin-bottom:14px;font-size:14px;line-height:1.9">`;
+  if (u.paciente) h += `<strong>Paciente:</strong> ${esc(u.paciente)}\n`;
+  h += `<strong>Data do atendimento:</strong> ${esc(u.dataAtendimento)}\n`;
+  h += `<strong>Prioridade do seguimento:</strong> <span style="background:${pBg[pr]||'#EAF3DE'};color:${pCor[pr]||'#3B6D11'};padding:2px 8px;border-radius:4px;font-size:13px;font-weight:500">${esc(pr)}</span>`;
+  h += `</div>`;
+
+  const sec = (num, titulo, conteudo) => `
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;font-weight:600;color:#1F4E79;border-bottom:1px solid #2E75B6;padding-bottom:4px;margin-bottom:8px">${num}. ${titulo}</div>
+      <div style="font-size:14px;line-height:1.75;color:var(--txt)">${conteudo}</div>
+    </div>`;
+
+  h += sec('1','RESUMO CLÍNICO', esc(u.resumoClinico));
+
+  if (u.impressaoDiagnostica?.length)
+    h += sec('2','IMPRESSÃO DIAGNÓSTICA',
+      u.impressaoDiagnostica.map(x => '- ' + esc(x)).join('\n'));
+
+  if (u.condutaRealizada?.length)
+    h += sec('3','CONDUTA REALIZADA',
+      u.condutaRealizada.map(x => '- ' + esc(x)).join('\n'));
+
+  if (u.solicitacaoUBS?.length)
+    h += sec('4','SOLICITAÇÃO / SUGESTÃO À UBS',
+      u.solicitacaoUBS.map(x => '- ' + esc(x)).join('\n'));
+
+  h += `<div style="margin-top:20px;padding-top:12px;border-top:0.5px solid var(--brd);font-size:14px;color:var(--txt2)">
+    Atenciosamente,<br><br>
+    <div style="border-bottom:0.5px solid var(--brd2);width:220px;margin:8px 0"></div>
+    Nome / CRM
+  </div>`;
+  h += '</div>';
+  document.getElementById('ubs-out').innerHTML = h;
+}
+
+function dlUBSTxt() {
+  if (!ubsData) return;
+  const u = ubsData;
+  let txt = 'ENCAMINHAMENTO / CONTRARREFERÊNCIA\n';
+  txt += 'À Equipe de Saúde da Família / Unidade Básica de Saúde\n';
+  txt += '─'.repeat(50) + '\n';
+  if (u.paciente) txt += 'Paciente: ' + u.paciente + '\n';
+  txt += 'Data do atendimento: ' + u.dataAtendimento + '\n';
+  txt += 'Prioridade: ' + u.prioridade + '\n\n';
+  txt += '1. RESUMO CLÍNICO:\n' + u.resumoClinico + '\n\n';
+  if (u.impressaoDiagnostica?.length)
+    txt += '2. IMPRESSÃO DIAGNÓSTICA:\n' + u.impressaoDiagnostica.map(x=>'- '+x).join('\n') + '\n\n';
+  if (u.condutaRealizada?.length)
+    txt += '3. CONDUTA REALIZADA:\n' + u.condutaRealizada.map(x=>'- '+x).join('\n') + '\n\n';
+  if (u.solicitacaoUBS?.length)
+    txt += '4. SOLICITAÇÃO / SUGESTÃO À UBS:\n' + u.solicitacaoUBS.map(x=>'- '+x).join('\n') + '\n\n';
+  txt += 'Atenciosamente,\n\n\n_______________________\nNome / CRM';
+  download(txt, 'encaminhamento-ubs-'+isoDate()+'.txt', 'text/plain;charset=utf-8');
+}
+
+// ─── DOCX ─────────────────────────────────────────────────────────────────
+async function dlDocx(tipo) {
+  const data = tipo==='ubs' ? ubsData : cartaData;
+  if (!data) return;
+  const btn = document.querySelector('#'+(tipo==='ubs'?'ubs':'carta')+'-acts button');
+  btn.textContent = 'Gerando...'; btn.disabled = true;
+  try {
+    const {Document,Packer,Paragraph,TextRun,AlignmentType,LevelFormat,BorderStyle} = docx;
+    const p = (t,opts={}) => new Paragraph({children:[new TextRun({text:t,...opts})],spacing:{after:60}});
+    const bul = (t,ref='b',color) => new Paragraph({numbering:{reference:ref,level:0},children:[new TextRun({text:t,size:22,...(color?{color}:{})})],spacing:{after:40}});
+    const gap = () => new Paragraph({children:[new TextRun('')],spacing:{after:120}});
+    const sec = t => new Paragraph({children:[new TextRun({text:t,bold:true,size:24,color:'1F4E79'})],border:{bottom:{style:BorderStyle.SINGLE,size:4,color:'2E75B6',space:1}},spacing:{before:240,after:100}});
+    let kids = [];
+    if (tipo === 'carta') {
+      const c = cartaData;
+      kids = [
+        new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Orientações ao Paciente',bold:true,size:32,color:'1F4E79'})],spacing:{after:60}}),
+        new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Pronto-Socorro',size:22,color:'595959'})],spacing:{after:300}}),
+        sec('Diagnóstico'),p(c.diagnostico,{size:22}),gap()
+      ];
+      if (c.orientacoes&&c.orientacoes.length){kids.push(sec('Orientações'));c.orientacoes.forEach(o=>kids.push(bul(o,'b')));kids.push(gap());}
+      if (c.medicamentos&&c.medicamentos.length){kids.push(sec('Medicamentos'));c.medicamentos.forEach(m=>kids.push(bul(m,'m')));kids.push(gap());}
+      if (c.sinaisAlerta&&c.sinaisAlerta.length){kids.push(sec('Sinais de alerta — volte ao PS se:'));c.sinaisAlerta.forEach(s=>kids.push(bul(s,'al','C00000')));kids.push(gap());}
+      if (c.retorno){kids.push(sec('Retorno'));kids.push(p(c.retorno,{size:22}));kids.push(gap());}
+    } else {
+      const u = ubsData;
+      kids = [
+        new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Encaminhamento para UBS',bold:true,size:32,color:'1F4E79'})],spacing:{after:60}}),
+        new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Prioridade: '+u.prioridade,size:22,color:'595959'})],spacing:{after:300}}),
+        sec('Resumo Clínico'),p(u.resumoClinico,{size:22}),gap()
+      ];
+      if (u.impressaoDiagnostica&&u.impressaoDiagnostica.length){kids.push(sec('Impressão Diagnóstica'));u.impressaoDiagnostica.forEach(x=>kids.push(bul(x,'b')));kids.push(gap());}
+      if (u.condutaRealizada&&u.condutaRealizada.length){kids.push(sec('Condutas no PS'));u.condutaRealizada.forEach(x=>kids.push(bul(x,'m')));kids.push(gap());}
+      if (u.solicitacaoUBS&&u.solicitacaoUBS.length){kids.push(sec('Solicitação à UBS'));u.solicitacaoUBS.forEach(x=>kids.push(bul(x,'al')));kids.push(gap());}
+    }
+    kids.push(new Paragraph({border:{top:{style:BorderStyle.SINGLE,size:4,color:'CCCCCC',space:1}},spacing:{before:300,after:80},children:[new TextRun({text:'Data: '+hoje,size:20,color:'595959',italics:true})]}));
+    const doc = new Document({
+      numbering:{config:[
+        {reference:'b',levels:[{level:0,format:LevelFormat.BULLET,text:'•',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:720,hanging:360}}}}]},
+        {reference:'m',levels:[{level:0,format:LevelFormat.BULLET,text:'•',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:720,hanging:360}}}}]},
+        {reference:'al',levels:[{level:0,format:LevelFormat.BULLET,text:'•',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:720,hanging:360}}}}]},
+      ]},
+      sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1440,right:1440,bottom:1440,left:1440}}},children:kids}]
+    });
+    const buf = await Packer.toBuffer(doc);
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    download(URL.createObjectURL(blob), (tipo==='ubs'?'encaminhamento-ubs':'orientacoes-paciente')+'-'+isoDate()+'.docx', null, true);
+    btn.textContent = 'Baixado!';
+    setTimeout(() => { btn.textContent = 'Baixar .docx'; btn.disabled = false; }, 2500);
+  } catch(e) {
+    console.error(e);
+    btn.textContent = 'Erro'; setTimeout(() => { btn.textContent = 'Baixar .docx'; btn.disabled = false; }, 3000);
+  }
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────
+function show(id) { document.getElementById(id).style.display = 'block'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+function spin(id, on) { document.getElementById(id).style.display = on ? 'block' : 'none'; }
+function download(content, filename, type, isUrl=false) {
+  const url = isUrl ? content : URL.createObjectURL(new Blob([content],{type:type}));
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  if (!isUrl) URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
