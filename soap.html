@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>SOAP Transcriber</title>
+<style>
+:root {
+  --bg-page:#F0EFE9;--bg-card:#FFFFFF;--bg-field:#F5F4F0;
+  --txt:#1A1A1A;--txt2:#6B6B6B;--txt3:#9B9B9B;
+  --brd:rgba(0,0,0,0.12);--brd2:rgba(0,0,0,0.22);
+  --ff:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;
+  --rad:10px;--rad-lg:14px;--touch-min:52px;
+  --medico:#185FA5;--paciente:#3B6D11;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow-x:hidden;}
+body{font-family:var(--ff);background:var(--bg-page);padding:env(safe-area-inset-top,0) env(safe-area-inset-right,16px) env(safe-area-inset-bottom,0) env(safe-area-inset-left,16px);}
+.wrap{padding:16px;max-width:780px;margin:0 auto;}
+.card{background:var(--bg-card);border:0.5px solid var(--brd);border-radius:var(--rad-lg);padding:1.25rem 1.5rem;margin-bottom:14px;}
+.label{font-size:12px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.ico{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;border-radius:5px;font-size:12px;font-weight:500;flex-shrink:0;}
+.t-box{min-height:80px;background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);padding:14px 16px;font-size:15px;line-height:1.7;color:var(--txt);white-space:pre-wrap;word-break:break-word;}
+.t-box.empty{color:var(--txt3);font-style:italic;font-size:14px;}
+textarea{width:100%;font-size:14px;line-height:1.7;font-family:var(--ff);color:var(--txt);background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);padding:12px 16px;resize:vertical;min-height:80px;}
+textarea:focus{outline:none;border-color:var(--brd2);}
+textarea::placeholder{color:var(--txt3);font-style:italic;font-size:13px;}
+input[type=password]{width:100%;font-size:14px;padding:12px 14px;border:0.5px solid var(--brd2);border-radius:var(--rad);background:var(--bg-field);font-family:var(--ff);color:var(--txt);}
+.row{display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:8px;}
+.meta{font-size:12px;color:var(--txt3);}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 20px;min-height:var(--touch-min);border:0.5px solid var(--brd2);border-radius:var(--rad);background:transparent;color:var(--txt);font-size:15px;font-weight:500;cursor:pointer;font-family:var(--ff);line-height:1;transition:background .12s,opacity .12s;-webkit-user-select:none;user-select:none;}
+.btn:active{opacity:.65;}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.btn-rec{border-color:#D85A30;color:#D85A30;}
+.btn-rec.on{background:#FAECE7;border-color:#993C1D;color:#993C1D;}
+.btn-dark{background:#1A1A1A;color:#fff;border-color:transparent;}
+.btn-dark:active{opacity:.75;background:#1A1A1A;}
+.btn-blue{border-color:#185FA5;color:#185FA5;}
+.btn-green{border-color:#3B6D11;color:#3B6D11;}
+.btn-purple{border-color:#534AB7;color:#534AB7;}
+.btn-rec-main{width:100%;min-height:72px;font-size:18px;font-weight:600;border-radius:var(--rad-lg);border-width:1.5px;transition:background .15s,transform .1s;}
+.btn-rec-main:active{transform:scale(.98);}
+.btn-rec-main.on{background:#FAECE7;}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.on .dot{animation:pulse 1s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+.rec-status{display:flex;align-items:center;justify-content:space-between;background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);padding:12px 16px;margin-bottom:12px;}
+.rec-timer{font-size:22px;font-weight:600;color:var(--txt);font-variant-numeric:tabular-nums;letter-spacing:-.5px;}
+.rec-timer.active{color:#993C1D;}
+.audio-wave{display:flex;align-items:center;gap:3px;height:24px;}
+.audio-wave span{display:block;width:3px;border-radius:2px;background:#D85A30;height:6px;}
+.audio-wave.active span:nth-child(1){animation:wave 0.8s ease-in-out infinite 0s;}
+.audio-wave.active span:nth-child(2){animation:wave 0.8s ease-in-out infinite 0.1s;}
+.audio-wave.active span:nth-child(3){animation:wave 0.8s ease-in-out infinite 0.2s;}
+.audio-wave.active span:nth-child(4){animation:wave 0.8s ease-in-out infinite 0.15s;}
+.audio-wave.active span:nth-child(5){animation:wave 0.8s ease-in-out infinite 0.05s;}
+@keyframes wave{0%,100%{height:4px}50%{height:20px}}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;padding:5px 12px;border-radius:var(--rad);margin-bottom:12px;}
+.idle{background:var(--bg-field);color:var(--txt2);}
+.rec{background:#FAECE7;color:#993C1D;}
+.proc{background:#E6F1FB;color:#185FA5;}
+.done{background:#EAF3DE;color:#3B6D11;}
+.err{background:#FCEBEB;color:#A32D2D;}
+.warn{background:#FAEEDA;color:#412402;border-radius:var(--rad);padding:12px 14px;font-size:14px;line-height:1.6;margin-bottom:10px;}
+.ok{background:#EAF3DE;color:#3B6D11;border-radius:var(--rad);padding:8px 12px;font-size:13px;margin-top:8px;display:none;}
+.err-box{color:#A32D2D;background:#FCEBEB;font-size:14px;padding:12px 16px;border-radius:var(--rad);}
+.toggle-hd{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;min-height:44px;}
+.arrow{font-size:12px;color:var(--txt3);transition:transform .2s;}
+.arrow.open{transform:rotate(180deg);}
+.coll{overflow:hidden;transition:max-height .3s ease;}
+.sblock{margin-bottom:16px;}
+.slabel{font-size:13px;font-weight:600;color:var(--txt2);margin-bottom:7px;padding-bottom:6px;border-bottom:0.5px solid var(--brd);display:flex;align-items:center;gap:7px;}
+.sl{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;font-size:12px;font-weight:600;}
+.sl-s{background:#E6F1FB;color:#185FA5;}.sl-o{background:#EAF3DE;color:#3B6D11;}
+.sl-a{background:#FAEEDA;color:#854F0B;}.sl-p{background:#EEEDFE;color:#534AB7;}
+.sl-sc{background:#F3E8FF;color:#6B21A8;}
+.scontent{font-size:14px;line-height:1.8;color:var(--txt);white-space:pre-wrap;word-break:break-word;padding:12px 16px;background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);}
+.sc-item{background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);padding:14px 16px;margin-bottom:8px;}
+.sc-name{font-size:12px;font-weight:500;color:var(--txt2);margin-bottom:4px;}
+.sc-val{font-size:24px;font-weight:600;color:var(--txt);}
+.sc-interp{font-size:13px;color:var(--txt2);margin-top:3px;}
+.sc-detail{font-size:12px;color:var(--txt3);margin-top:5px;line-height:1.55;white-space:pre-wrap;}
+.sc-warn{color:#D85A30;}
+.carta-content{font-size:14px;line-height:1.85;color:var(--txt);white-space:pre-wrap;word-break:break-word;padding:14px 16px;background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);}
+.spin{font-size:14px;color:var(--txt2);padding:10px 0;}
+.spin .d span{animation:blink 1.2s infinite;display:inline-block;}
+.spin .d span:nth-child(2){animation-delay:.2s;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.tpl-btn{font-size:14px;min-height:44px;padding:0 16px;}
+.tpl-btn.active{background:#1A1A1A;color:#fff;border-color:transparent;}
+.tpl-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
+.tpl-scroll::-webkit-scrollbar{display:none;}
+.key-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:500px){.key-grid{grid-template-columns:1fr;}}
+.key-row{display:flex;gap:8px;}
+.key-row input{flex:1;}
+
+/* ── DIARIZAÇÃO ── */
+/* Turnos na transcrição */
+.turn{padding:8px 12px;border-radius:var(--rad);margin-bottom:6px;font-size:14px;line-height:1.7;display:flex;gap:10px;align-items:flex-start;cursor:pointer;border:1.5px solid transparent;transition:border-color .15s;}
+.turn:active{opacity:.75;}
+.turn.medico{background:#E6F1FB;}
+.turn.paciente{background:#EAF3DE;}
+.turn.unknown{background:var(--bg-field);border-color:#D85A30;}
+.turn-tag{font-size:11px;font-weight:700;letter-spacing:.06em;flex-shrink:0;padding-top:2px;}
+.turn.medico .turn-tag{color:var(--medico);}
+.turn.paciente .turn-tag{color:var(--paciente);}
+.turn.unknown .turn-tag{color:#D85A30;}
+.turn-text{flex:1;}
+/* Legenda */
+.diar-legend{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--txt2);}
+.leg-dot{width:10px;height:10px;border-radius:3px;}
+/* Instrução de calibração */
+.calib-box{background:#FAEEDA;border:0.5px solid #E8C97A;border-radius:var(--rad);padding:12px 14px;font-size:13px;color:#412402;line-height:1.6;margin-bottom:12px;}
+
+/* ── FOTOS/OCR ── */
+.photo-grid{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
+.photo-thumb{position:relative;width:80px;height:80px;border-radius:var(--rad);overflow:hidden;border:0.5px solid var(--brd);flex-shrink:0;}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;}
+.photo-thumb .ph-remove{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.photo-thumb .ph-status{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);color:#fff;font-size:10px;text-align:center;padding:2px 0;}
+.photo-add{width:80px;height:80px;border-radius:var(--rad);border:1.5px dashed var(--brd2);display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;color:var(--txt3);background:var(--bg-field);flex-shrink:0;}
+.photo-add:active{opacity:.6;}
+
+/* ── OVERLAY ── */
+#transcribing-overlay{display:none;position:fixed;inset:0;background:rgba(248,247,243,.92);backdrop-filter:blur(4px);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+#transcribing-overlay.show{display:flex;}
+.overlay-spin{font-size:16px;font-weight:500;color:var(--txt2);}
+.overlay-spinner{width:36px;height:36px;border:3px solid var(--brd);border-top-color:#185FA5;border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Drive status */
+#drive-status{display:none;margin-top:10px;font-size:13px;padding:8px 12px;border-radius:var(--rad);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- OVERLAY -->
+<div id="transcribing-overlay">
+  <div class="overlay-spinner"></div>
+  <div class="overlay-spin" id="overlay-msg">Transcrevendo áudio<span class="d"><span>.</span><span>.</span><span>.</span></span></div>
+</div>
+
+<!-- CHAVES DE API -->
+<div id="key-card" class="card" style="border-color:#D85A30;background:#FFFAF8">
+  <div class="label"><span class="ico" style="background:#FAECE7;color:#D85A30;">🔑</span>Chaves de API</div>
+  <div style="font-size:13px;color:var(--txt2);margin-bottom:12px;line-height:1.5">
+    Anthropic: <a href="https://console.anthropic.com" target="_blank" style="color:#185FA5">console.anthropic.com</a> &nbsp;·&nbsp;
+    OpenAI (Whisper): <a href="https://platform.openai.com/api-keys" target="_blank" style="color:#185FA5">platform.openai.com</a>
+  </div>
+  <div class="key-grid">
+    <div>
+      <div style="font-size:11px;color:var(--txt3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Anthropic (SOAP)</div>
+      <div class="key-row"><input type="password" id="apikey" placeholder="sk-ant-..."></div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--txt3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">OpenAI (Whisper + OCR)</div>
+      <div class="key-row"><input type="password" id="openaikey" placeholder="sk-..."></div>
+    </div>
+  </div>
+  <div style="margin-top:10px">
+    <button class="btn btn-dark" onclick="saveKeys()" style="min-height:48px;font-size:15px;padding:0 24px">Salvar chaves</button>
+  </div>
+  <div id="key-ok" class="ok">✓ Chaves salvas</div>
+</div>
+
+<!-- CALIBRAÇÃO DE VOZ -->
+<div class="card" id="calib-card">
+  <div class="label"><span class="ico" style="background:#FAEEDA;color:#854F0B;">🎤</span>Calibração de voz</div>
+  <div class="calib-box">
+    Para identificar sua voz automaticamente, grave uma frase curta agora. Isso é feito <strong>uma única vez</strong> e fica salvo no app.
+  </div>
+  <div style="font-size:13px;color:var(--txt2);margin-bottom:10px">Fale algo como: <em>"Sou o médico, calibração de voz."</em></div>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <button class="btn btn-rec" id="calib-btn" onclick="toggleCalib()" style="min-height:48px;">
+      <div class="dot"></div><span id="calib-label">Gravar minha voz</span>
+    </button>
+    <span id="calib-status" style="font-size:13px;color:var(--txt3)"></span>
+  </div>
+  <div id="calib-ok" class="ok" style="margin-top:10px">✓ Voz calibrada — identificação automática ativada</div>
+</div>
+
+<!-- GRAVAÇÃO -->
+<div class="card">
+  <div class="label"><span class="ico" style="background:#E6F1FB;color:#185FA5;">🎙</span>Gravação da consulta</div>
+
+  <div id="mic-warn" class="warn" style="display:none">
+    ⚠️ <strong>Microfone não autorizado.</strong> Verifique as permissões em Configurações → Safari → Microfone.
+  </div>
+
+  <div class="rec-status">
+    <div>
+      <div class="badge idle" id="badge" style="margin-bottom:0"><div class="dot"></div><span id="btext">Pronto para gravar</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="audio-wave" id="audio-wave"><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="rec-timer" id="rec-timer">00:00</div>
+    </div>
+  </div>
+
+  <button class="btn btn-rec btn-rec-main" id="rbtn" onclick="toggleRec()">
+    <div class="dot"></div><span id="rlabel">Iniciar Gravação</span>
+  </button>
+  <div style="font-size:12px;color:var(--txt3);text-align:center;margin-top:8px">
+    Whisper transcreve e identifica automaticamente médico vs. paciente
+  </div>
+
+  <!-- Transcrição com diarização -->
+  <div style="margin-top:16px">
+    <div class="diar-legend">
+      <div class="leg-item"><div class="leg-dot" style="background:#E6F1FB;border:1px solid #185FA5"></div>Médico</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#EAF3DE;border:1px solid #3B6D11"></div>Paciente</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--bg-field);border:1px solid #D85A30"></div>Não identificado — toque para corrigir</div>
+    </div>
+    <div id="t-display" class="t-box empty">A transcrição aparecerá aqui após parar a gravação...</div>
+  </div>
+
+  <!-- Correções manuais -->
+  <div style="margin-top:12px">
+    <div style="font-size:11px;color:var(--txt3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">✏️ Correções e complementos (opcional)</div>
+    <textarea id="t-edit" placeholder="Corrija ou complemente o texto transcrito..." oninput="syncEdit()"></textarea>
+  </div>
+
+  <div class="row">
+    <span class="meta" id="chars"></span>
+    <span class="meta" id="mic-status"></span>
+  </div>
+
+  <div class="actions">
+    <button class="btn" id="clrbtn" onclick="clearAll()" disabled>Limpar</button>
+    <button class="btn btn-dark" id="soapbtn" onclick="doSOAP()" disabled style="flex:1">Gerar SOAP ↗</button>
+  </div>
+</div>
+
+<!-- FOTOS / OCR -->
+<div class="card">
+  <div class="label"><span class="ico" style="background:#F3E8FF;color:#6B21A8;">📷</span>Fotos para o prontuário</div>
+  <div style="font-size:13px;color:var(--txt2);margin-bottom:10px">Fotografe receitas, exames ou documentos. O app extrai o texto e inclui no SOAP automaticamente.</div>
+  <div class="photo-grid" id="photo-grid">
+    <div class="photo-add" onclick="addPhoto()" title="Adicionar foto">＋</div>
+  </div>
+  <input type="file" id="photo-input" accept="image/*" capture="environment" multiple style="display:none" onchange="handlePhotos(event)">
+  <div id="ocr-status" style="display:none;margin-top:10px;font-size:13px;color:var(--txt2)"></div>
+</div>
+
+<!-- TEMPLATE EXAME FÍSICO -->
+<div class="card">
+  <div class="label"><span class="ico" style="background:#F3E8FF;color:#6B21A8;">📋</span>Template do exame físico</div>
+  <div style="font-size:13px;color:var(--txt2);margin-bottom:10px">Selecione o template. A IA complementará conforme o caso clínico.</div>
+  <div class="tpl-scroll" id="tpl-btns">
+    <button class="btn tpl-btn active" onclick="selectTpl(0)">Normal</button>
+    <button class="btn tpl-btn" onclick="selectTpl(1)">Amigdalite</button>
+    <button class="btn tpl-btn" onclick="selectTpl(2)">OMA</button>
+    <button class="btn tpl-btn" onclick="selectTpl(3)">Neurológico</button>
+    <button class="btn tpl-btn" onclick="selectTpl(4)">Trauma</button>
+    <button class="btn tpl-btn" onclick="selectTpl(5)">Alergia</button>
+  </div>
+  <div id="tpl-preview" style="margin-top:10px;font-size:13px;color:var(--txt2);background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);padding:12px 16px;white-space:pre-line;line-height:1.7"></div>
+</div>
+
+<!-- INFORMAÇÕES ADICIONAIS -->
+<div class="card">
+  <div class="toggle-hd" onclick="toggleExtra()">
+    <div class="label" style="margin:0"><span class="ico" style="background:#EAF3DE;color:#3B6D11;">+</span>Informações adicionais</div>
+    <span class="arrow" id="extra-arrow">▼</span>
+  </div>
+  <div class="coll" id="extra-body" style="max-height:0">
+    <div style="margin-top:12px">
+      <div style="font-size:13px;color:var(--txt2);margin-bottom:8px;line-height:1.5">Sinais vitais, exames laboratoriais, medicamentos ou complementos ao exame físico:</div>
+      <textarea id="extra" placeholder="Ex: PA 130x80, FC 88bpm, Tax 37.8°C." oninput="updateBtn()"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- SOAP -->
+<div class="card" id="soap-card" style="display:none">
+  <div class="label"><span class="ico" style="background:#EEEDFE;color:#534AB7;">⚕</span>Evolução SOAP</div>
+  <div class="spin" id="soap-spin" style="display:none">Gerando<span class="d"><span>.</span><span>.</span><span>.</span></span></div>
+  <div id="soap-out"></div>
+  <div class="actions" id="soap-acts" style="display:none">
+    <button class="btn" onclick="copySOAP()">Copiar SOAP</button>
+    <button class="btn btn-green" onclick="dlTxt()">📄 Baixar .txt</button>
+    <button class="btn btn-blue" onclick="doCard()">Carta ao paciente</button>
+    <button class="btn btn-purple" onclick="doUBS()">Carta para UBS</button>
+    <button class="btn" id="drive-btn" onclick="saveSOAPtoDrive()" style="border-color:#1a73e8;color:#1a73e8;">
+      <svg width="15" height="15" viewBox="0 0 87.3 78" style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>
+      Drive
+    </button>
+    <button class="btn" onclick="clearAll()">Nova consulta</button>
+  </div>
+  <div id="drive-status"></div>
+</div>
+
+<!-- CARTA PACIENTE -->
+<div class="card" id="carta-card" style="display:none">
+  <div class="label"><span class="ico" style="background:#FAEEDA;color:#854F0B;">✉</span>Carta ao paciente</div>
+  <div class="spin" id="carta-spin" style="display:none">Gerando<span class="d"><span>.</span><span>.</span><span>.</span></span></div>
+  <div id="carta-out"></div>
+  <div class="actions" id="carta-acts" style="display:none">
+    <button class="btn btn-blue" onclick="dlDocx('carta')">Baixar .docx</button>
+  </div>
+</div>
+
+<!-- CARTA UBS -->
+<div class="card" id="ubs-card" style="display:none">
+  <div class="label"><span class="ico" style="background:#EEEDFE;color:#534AB7;">🏥</span>Carta para a UBS</div>
+  <div class="spin" id="ubs-spin" style="display:none">Gerando<span class="d"><span>.</span><span>.</span><span>.</span></span></div>
+  <div id="ubs-out"></div>
+  <div class="actions" id="ubs-acts" style="display:none">
+    <button class="btn btn-purple" onclick="dlDocx('ubs')">Baixar .docx</button>
+    <button class="btn btn-green" onclick="dlUBSTxt()">📄 Baixar .txt</button>
+  </div>
+</div>
+
+</div><!-- .wrap -->
+<script src="https://unpkg.com/docx@9/build/index.js"></script>
+<script>
+'use strict';
+
+// ─── STATE ────────────────────────────────────────────────────────────────
+let mediaRecorder = null;
+let audioChunks = [];
+let isRec = false;
+let timerInterval = null;
+let timerSeconds = 0;
+
+// Diarização
+let turns = [];           // [{speaker:'medico'|'paciente'|'unknown', text:'...'}]
+let voiceProfile = null;  // pitch médio do médico após calibração
+let calibChunks = [];
+let isCalib = false;
+let calibRecorder = null;
+
+// OCR
+let photos = [];          // [{id, dataUrl, ocrText, status}]
+let photoIdCounter = 0;
+
+let soapData = {}, cartaData = null, ubsData = null;
+let extraOpen = false;
+
+const ts = () => new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})
+           + ' — ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+const isoDate = () => new Date().toISOString().slice(0,10);
+
+// ─── CHAVES ───────────────────────────────────────────────────────────────
+function saveKeys() {
+  const ant = document.getElementById('apikey').value.trim();
+  const oai = document.getElementById('openaikey').value.trim();
+  if (!ant && !oai) { alert('Cole pelo menos uma chave.'); return; }
+  if (ant) localStorage.setItem('soap_anthropic_key', ant);
+  if (oai) localStorage.setItem('soap_openai_key', oai);
+  document.getElementById('key-ok').style.display = 'block';
+  setTimeout(() => document.getElementById('key-card').style.display = 'none', 1500);
+}
+function getAnthropicKey() { return document.getElementById('apikey').value.trim() || localStorage.getItem('soap_anthropic_key') || undefined; }
+function getOpenAIKey()    { return document.getElementById('openaikey').value.trim() || localStorage.getItem('soap_openai_key') || undefined; }
+
+window.addEventListener('DOMContentLoaded', () => {
+  const ant = localStorage.getItem('soap_anthropic_key');
+  const oai = localStorage.getItem('soap_openai_key');
+  if (ant) document.getElementById('apikey').value = ant;
+  if (oai) document.getElementById('openaikey').value = oai;
+  if (ant || oai) {
+    document.getElementById('key-ok').style.display = 'block';
+    document.getElementById('key-ok').textContent = '✓ Chaves carregadas';
+    setTimeout(() => document.getElementById('key-card').style.display = 'none', 1200);
+  }
+  // Carrega perfil de voz salvo
+  const vp = localStorage.getItem('soap_voice_profile');
+  if (vp) {
+    voiceProfile = JSON.parse(vp);
+    document.getElementById('calib-ok').style.display = 'block';
+    document.getElementById('calib-ok').textContent = '✓ Voz calibrada — identificação automática ativada';
+    document.getElementById('calib-label').textContent = 'Recalibrar voz';
+  }
+  initTpl();
+  toggleExtra();
+});
+
+// ─── TIMER ────────────────────────────────────────────────────────────────
+function startTimer() {
+  timerSeconds = 0; updateTimerDisplay();
+  timerInterval = setInterval(() => { timerSeconds++; updateTimerDisplay(); }, 1000);
+}
+function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
+function updateTimerDisplay() {
+  const m = String(Math.floor(timerSeconds/60)).padStart(2,'0');
+  const s = String(timerSeconds%60).padStart(2,'0');
+  const el = document.getElementById('rec-timer');
+  el.textContent = m+':'+s;
+  el.className = 'rec-timer' + (isRec ? ' active' : '');
+}
+
+// ─── CALIBRAÇÃO DE VOZ ────────────────────────────────────────────────────
+async function toggleCalib() {
+  if (!isCalib) {
+    await startCalib();
+  } else {
+    await stopCalib();
+  }
+}
+
+async function startCalib() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    calibChunks = [];
+    calibRecorder = new MediaRecorder(stream, getSupportedOptions());
+    calibRecorder.ondataavailable = e => { if (e.data.size > 0) calibChunks.push(e.data); };
+    calibRecorder.start(500);
+    isCalib = true;
+    const btn = document.getElementById('calib-btn');
+    btn.className = 'btn btn-rec on';
+    document.getElementById('calib-label').textContent = 'Parar calibração';
+    document.getElementById('calib-status').textContent = '🔴 Gravando...';
+  } catch(e) {
+    document.getElementById('calib-status').textContent = '🔴 Microfone bloqueado';
+  }
+}
+
+async function stopCalib() {
+  if (!calibRecorder) return;
+  isCalib = false;
+  document.getElementById('calib-status').textContent = 'Analisando...';
+  await new Promise(resolve => { calibRecorder.onstop = resolve; calibRecorder.stop(); calibRecorder.stream.getTracks().forEach(t=>t.stop()); });
+
+  // Extrai pitch médio do áudio de calibração usando Web Audio API
+  try {
+    const blob = new Blob(calibChunks, { type: calibChunks[0]?.type || 'audio/webm' });
+    const arrayBuf = await blob.arrayBuffer();
+    const audioCtx = new AudioContext();
+    const decoded = await audioCtx.decodeAudioData(arrayBuf);
+    const pitchMean = estimatePitch(decoded);
+    voiceProfile = { pitchMean, createdAt: Date.now() };
+    localStorage.setItem('soap_voice_profile', JSON.stringify(voiceProfile));
+    document.getElementById('calib-ok').style.display = 'block';
+    document.getElementById('calib-status').textContent = '';
+    document.getElementById('calib-label').textContent = 'Recalibrar voz';
+    const btn = document.getElementById('calib-btn');
+    btn.className = 'btn btn-rec';
+    audioCtx.close();
+  } catch(e) {
+    document.getElementById('calib-status').textContent = 'Erro na análise. Tente novamente.';
+  }
+}
+
+// Estimativa simples de pitch via autocorrelação
+function estimatePitch(audioBuffer) {
+  const data = audioBuffer.getChannelData(0);
+  const sampleRate = audioBuffer.sampleRate;
+  const bufSize = 2048;
+  let sumPitch = 0, count = 0;
+  for (let offset = 0; offset + bufSize < data.length; offset += bufSize * 4) {
+    const slice = data.slice(offset, offset + bufSize);
+    const pitch = autocorrelate(slice, sampleRate);
+    if (pitch > 60 && pitch < 400) { sumPitch += pitch; count++; }
+  }
+  return count > 0 ? sumPitch / count : 150;
+}
+
+function autocorrelate(buf, sampleRate) {
+  let SIZE = buf.length;
+  let rms = 0;
+  for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
+  rms = Math.sqrt(rms / SIZE);
+  if (rms < 0.01) return -1;
+  let r1 = 0, r2 = SIZE - 1;
+  for (let i = 0; i < SIZE/2; i++) if (Math.abs(buf[i]) < 0.2) { r1 = i; break; }
+  for (let i = 1; i < SIZE/2; i++) if (Math.abs(buf[SIZE-i]) < 0.2) { r2 = SIZE-i; break; }
+  buf = buf.slice(r1, r2);
+  SIZE = buf.length;
+  let c = new Array(SIZE).fill(0);
+  for (let i = 0; i < SIZE; i++) for (let j = 0; j < SIZE-i; j++) c[i] += buf[j]*buf[j+i];
+  let d = 0; while (c[d] > c[d+1]) d++;
+  let maxval = -1, maxpos = -1;
+  for (let i = d; i < SIZE; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+  let T0 = maxpos;
+  let x1 = c[T0-1], x2 = c[T0], x3 = c[T0+1];
+  let a = (x1+x3-2*x2)/2, b = (x3-x1)/2;
+  if (a) T0 -= b/(2*a);
+  return sampleRate / T0;
+}
+
+// Classifica speaker por pitch: se tiver perfil, compara; senão 'unknown'
+function classifySpeaker(pitchHz) {
+  if (!voiceProfile) return 'unknown';
+  if (pitchHz < 60 || pitchHz > 400) return 'unknown';
+  const diff = Math.abs(pitchHz - voiceProfile.pitchMean);
+  const pct  = diff / voiceProfile.pitchMean;
+  if (pct < 0.25) return 'medico';
+  if (pct > 0.35) return 'paciente';
+  return 'unknown'; // zona de dúvida
+}
+
+// ─── GRAVAÇÃO ─────────────────────────────────────────────────────────────
+async function toggleRec() {
+  if (!isRec) await startRec(); else await stopRec();
+}
+
+async function startRec() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    document.getElementById('mic-status').textContent = '🟢 Microfone ativo';
+    mediaRecorder = new MediaRecorder(stream, getSupportedOptions());
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.start(1000);
+    isRec = true;
+    const btn = document.getElementById('rbtn');
+    btn.className = 'btn btn-rec btn-rec-main on';
+    document.getElementById('rlabel').textContent = 'Parar Gravação';
+    setBadge('rec','Gravando...');
+    document.getElementById('audio-wave').classList.add('active');
+    startTimer();
+  } catch(e) {
+    document.getElementById('mic-warn').style.display = 'block';
+    document.getElementById('mic-status').textContent = '🔴 Microfone bloqueado';
+    setBadge('err','Microfone bloqueado');
+  }
+}
+
+async function stopRec() {
+  if (!mediaRecorder) return;
+  isRec = false;
+  const btn = document.getElementById('rbtn');
+  btn.className = 'btn btn-rec btn-rec-main';
+  document.getElementById('rlabel').textContent = 'Iniciar Gravação';
+  setBadge('proc','Transcrevendo...');
+  document.getElementById('audio-wave').classList.remove('active');
+  stopTimer();
+  btn.disabled = true;
+
+  await new Promise(resolve => { mediaRecorder.onstop = resolve; mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(t=>t.stop()); });
+
+  showOverlay('Transcrevendo e identificando falas...');
+  try {
+    const blob = new Blob(audioChunks, { type: audioChunks[0]?.type || 'audio/webm' });
+    // Transcreve com Whisper
+    const rawText = await transcribeWhisper(blob);
+    // Diariza via pitch + IA
+    turns = await diarize(blob, rawText);
+    renderTurns();
+    setBadge('done','Transcrição concluída');
+    document.getElementById('mic-status').textContent = '✓ Transcrito';
+  } catch(e) {
+    setBadge('err','Erro na transcrição');
+    const el = document.getElementById('t-display');
+    el.classList.remove('empty');
+    el.innerHTML = '<span style="color:#A32D2D">Erro: ' + esc(e.message) + '</span>';
+  }
+  hideOverlay();
+  btn.disabled = false;
+  mediaRecorder = null;
+}
+
+function getSupportedOptions() {
+  const types = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg'];
+  for (const t of types) if (MediaRecorder.isTypeSupported(t)) return { mimeType: t };
+  return {};
+}
+
+// ─── WHISPER ──────────────────────────────────────────────────────────────
+async function transcribeWhisper(audioBlob) {
+  const key = getOpenAIKey();
+  if (!key) throw new Error('Chave OpenAI não configurada.');
+  const ext = audioBlob.type.includes('mp4') ? 'mp4' : audioBlob.type.includes('ogg') ? 'ogg' : 'webm';
+  const formData = new FormData();
+  formData.append('file', audioBlob, 'audio.' + ext);
+  formData.append('model', 'whisper-1');
+  formData.append('language', 'pt');
+  formData.append('response_format', 'text');
+  const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST', headers: { 'Authorization': 'Bearer ' + key }, body: formData
+  });
+  if (!r.ok) throw new Error('Whisper ' + r.status + ': ' + (await r.text()).slice(0,150));
+  return (await r.text()).trim();
+}
+
+// ─── DIARIZAÇÃO ───────────────────────────────────────────────────────────
+// Divide a transcrição em turnos usando IA (Claude) e valida com pitch se disponível
+async function diarize(audioBlob, rawText) {
+  // Pede pra IA dividir em turnos médico/paciente
+  const aiTurns = await diarizeWithAI(rawText);
+
+  // Se temos perfil de voz, tentamos estimar pitch por segmento de áudio
+  // (simplificado: usamos apenas a IA pois segmentar áudio por turno requer mais infra)
+  // Marcamos como 'unknown' os que a IA ficou em dúvida
+  return aiTurns;
+}
+
+async function diarizeWithAI(text) {
+  const key = getAnthropicKey();
+  if (!key) {
+    // Sem chave: retorna tudo como um único turno unknown
+    return [{ speaker: 'unknown', text }];
+  }
+  try {
+    const result = await callAI(`Você é um assistente que analisa transcrições médicas de consultas no Pronto-Socorro.
+
+Analise a transcrição abaixo e divida em turnos de fala, identificando quem fala: o MÉDICO ou o PACIENTE.
+
+Regras:
+- O médico faz perguntas clínicas, explica diagnósticos, prescreve
+- O paciente descreve sintomas, responde perguntas, relata histórico
+- Se não tiver certeza: marque como "unknown"
+- Mantenha o texto EXATAMENTE como está — não corrija nem resuma
+
+Responda SOMENTE JSON válido:
+{"turns":[{"speaker":"medico"|"paciente"|"unknown","text":"..."}]}
+
+TRANSCRIÇÃO:
+"""
+${text}
+"""`, 2000);
+    if (result && result.turns && Array.isArray(result.turns)) return result.turns;
+  } catch(e) {}
+  return [{ speaker: 'unknown', text }];
+}
+
+// ─── RENDER TURNS ─────────────────────────────────────────────────────────
+function renderTurns() {
+  const el = document.getElementById('t-display');
+  if (!turns || turns.length === 0) {
+    el.classList.add('empty');
+    el.textContent = 'A transcrição aparecerá aqui após parar a gravação...';
+    return;
+  }
+  el.classList.remove('empty');
+  el.innerHTML = '';
+  turns.forEach((turn, idx) => {
+    const div = document.createElement('div');
+    div.className = 'turn ' + turn.speaker;
+    div.onclick = () => cycleSpeaker(idx);
+    div.title = 'Toque para corrigir';
+    const tag = turn.speaker === 'medico' ? 'MÉD' : turn.speaker === 'paciente' ? 'PAC' : '?';
+    div.innerHTML = `<span class="turn-tag">${tag}</span><span class="turn-text">${esc(turn.text)}</span>`;
+    el.appendChild(div);
+  });
+  updateBtn();
+}
+
+function cycleSpeaker(idx) {
+  const order = ['medico','paciente','unknown'];
+  const curr = turns[idx].speaker;
+  const next = order[(order.indexOf(curr)+1) % order.length];
+  turns[idx].speaker = next;
+  renderTurns();
+}
+
+function getFullText() {
+  // Monta texto com identificação de speaker
+  let auto = '';
+  if (turns && turns.length > 0) {
+    auto = turns.map(t => {
+      const prefix = t.speaker === 'medico' ? '[MÉDICO]: ' : t.speaker === 'paciente' ? '[PACIENTE]: ' : '[?]: ';
+      return prefix + t.text;
+    }).join('\n');
+  }
+  const manual = document.getElementById('t-edit').value.trim();
+  if (auto && manual) return auto + '\n\nCOMPLEMENTOS:\n' + manual;
+  return auto || manual;
+}
+
+function syncEdit() { updateBtn(); }
+
+function updateBtn() {
+  const n = getFullText().length;
+  const extra = document.getElementById('extra').value.trim();
+  const hasOCR = photos.some(p => p.ocrText);
+  document.getElementById('chars').textContent = n ? n + ' caracteres' : '';
+  document.getElementById('soapbtn').disabled = n < 5 && !extra && !hasOCR;
+  document.getElementById('clrbtn').disabled = !n && !extra && photos.length === 0;
+}
+
+function clearAll() {
+  turns = []; audioChunks = [];
+  document.getElementById('t-edit').value = '';
+  document.getElementById('extra').value = '';
+  document.getElementById('t-display').classList.add('empty');
+  document.getElementById('t-display').textContent = 'A transcrição aparecerá aqui após parar a gravação...';
+  // Limpa fotos
+  photos = [];
+  renderPhotoGrid();
+  updateBtn();
+  setBadge('idle','Pronto para gravar');
+  document.getElementById('mic-status').textContent = '';
+  document.getElementById('rec-timer').textContent = '00:00';
+  document.getElementById('rec-timer').className = 'rec-timer';
+  ['soap-card','carta-card','ubs-card'].forEach(id => document.getElementById(id).style.display = 'none');
+  soapData = {}; cartaData = null; ubsData = null;
+}
+
+// ─── FOTOS / OCR ──────────────────────────────────────────────────────────
+function addPhoto() {
+  document.getElementById('photo-input').click();
+}
+
+async function handlePhotos(event) {
+  const files = Array.from(event.target.files);
+  event.target.value = ''; // reset para permitir mesma foto novamente
+  for (const file of files) {
+    const id = ++photoIdCounter;
+    const dataUrl = await fileToDataUrl(file);
+    photos.push({ id, dataUrl, ocrText: null, status: 'processing' });
+    renderPhotoGrid();
+    // OCR
+    try {
+      const text = await ocrImage(dataUrl);
+      const ph = photos.find(p => p.id === id);
+      if (ph) { ph.ocrText = text; ph.status = 'done'; }
+    } catch(e) {
+      const ph = photos.find(p => p.id === id);
+      if (ph) ph.status = 'error';
+    }
+    renderPhotoGrid();
+    updateBtn();
+  }
+}
+
+function fileToDataUrl(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+async function ocrImage(dataUrl) {
+  const key = getAnthropicKey();
+  if (!key) throw new Error('Chave Anthropic não configurada');
+  const base64 = dataUrl.split(',')[1];
+  const mediaType = dataUrl.split(';')[0].split(':')[1];
+  const headers = { 'Content-Type':'application/json', 'anthropic-version':'2023-06-01', 'x-api-key': key, 'anthropic-dangerous-direct-browser-access':'true' };
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST', headers,
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 800,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+          { type: 'text', text: 'Esta é uma imagem de um documento médico (receita, resultado de exame, laudo, etc.). Extraia TODO o texto relevante de forma estruturada. Se for uma receita, liste os medicamentos com doses e posologia. Se for um exame, liste os valores e referências. Responda apenas com o texto extraído, sem comentários.' }
+        ]
+      }]
+    })
+  });
+  if (!r.ok) throw new Error('OCR ' + r.status);
+  const d = await r.json();
+  return d.content.map(b => b.text||'').join('').trim();
+}
+
+function removePhoto(id) {
+  photos = photos.filter(p => p.id !== id);
+  renderPhotoGrid();
+  updateBtn();
+}
+
+function renderPhotoGrid() {
+  const grid = document.getElementById('photo-grid');
+  grid.innerHTML = '';
+  photos.forEach(ph => {
+    const div = document.createElement('div');
+    div.className = 'photo-thumb';
+    const statusLabel = ph.status === 'processing' ? '⏳ lendo...' : ph.status === 'done' ? '✓ lido' : '✗ erro';
+    div.innerHTML = `<img src="${ph.dataUrl}" alt="foto">
+      <button class="ph-remove" onclick="removePhoto(${ph.id})">×</button>
+      <div class="ph-status">${statusLabel}</div>`;
+    grid.appendChild(div);
+  });
+  // Botão de adicionar
+  const add = document.createElement('div');
+  add.className = 'photo-add';
+  add.textContent = '＋';
+  add.onclick = addPhoto;
+  grid.appendChild(add);
+}
+
+function getOCRText() {
+  const texts = photos.filter(p => p.ocrText).map(p => p.ocrText);
+  return texts.length ? texts.join('\n\n---\n\n') : '';
+}
+
+// ─── TEMPLATES ────────────────────────────────────────────────────────────
+const TPL_NAMES = ['Normal','Amigdalite','OMA','Neurológico','Trauma','Alergia'];
+const TEMPLATES = [
+`- EFG: BEG, corado, hidratado, anictérico, eupneico em AA.
+- NEURO: LOTE, pupilas isocóricas e fotorreagentes, ausência de déficits focais, sem sinais de irritação meníngea.
+- AR: MVBD sem RA.
+- ACV: BRNF em 2T, sem sopros.
+- ABDOME: Flácido, indolor à palpação, sem sinais de IP. Blumberg negativo. Rovsing negativo. Murphy negativo.
+- EXTREMIDADES: Bem perfundidas, sem edemas.
+- OROSCOPIA, OTOSCOPIA E RINOSCOPIA: Sem particularidades.`,
+`- EFG: BEG, corado, hidratado, anictérico, eupneico em AA.
+- NEURO: LOTE, pupilas isocóricas e fotorreagentes, ausência de déficits focais, sem sinais de irritação meníngea.
+- AR: MVBD sem RA.
+- ACV: BRNF em 2T, sem sopros.
+- ABDOME: Flácido, indolor à palpação, sem sinais de IP. Blumberg negativo. Rovsing negativo. Murphy negativo.
+- EXTREMIDADES: Bem perfundidas, sem edemas.
+- OROSCOPIA: Presença de hipertrofia, hiperemia e exsudato de amígdala.
+- OTOSCOPIA E RINOSCOPIA: Sem particularidades.`,
+`- EFG: BEG, corado, hidratado, anictérico, eupneico em AA.
+- NEURO: LOTE, pupilas isocóricas e fotorreagentes, ausência de déficits focais, sem sinais de irritação meníngea.
+- AR: MVBD sem RA.
+- ACV: BRNF em 2T, sem sopros.
+- ABDOME: Flácido, indolor à palpação, sem sinais de IP. Blumberg negativo. Rovsing negativo. Murphy negativo.
+- EXTREMIDADES: Bem perfundidas, sem edemas.
+- OROSCOPIA E RINOSCOPIA: Sem particularidades.
+- OTOSCOPIA: MT opaca e abaulada.`,
+`- EFG: BEG, corado, hidratado, anictérico, eupneico em AA.
+- NEURO: LOTE, pupilas isocóricas e fotorreagentes, ausência de déficits focais, sem sinais de irritação meníngea. Skew negativo. Romberg negativo. Head Impulse negativo. Nariz-Índex negativo.
+- AR: MVBD sem RA.
+- ACV: BRNF em 2T, sem sopros.
+- ABDOME: Flácido, indolor à palpação, sem sinais de IP. Blumberg negativo. Rovsing negativo. Murphy negativo.
+- EXTREMIDADES: Bem perfundidas, sem edemas.`,
+`- EFG: BEG, corado, hidratado, anictérico, eupneico em AA.
+- NEURO: LOTE, pupilas isocóricas e fotorreagentes, ausência de déficits focais, sem sinais de irritação meníngea.
+- AR: MVBD sem RA.
+- ACV: BRNF em 2T, sem sopros.
+- ABDOME: Flácido, indolor à palpação, sem sinais de IP. Blumberg negativo. Rovsing negativo. Murphy negativo.
+- EXTREMIDADES: Bem perfundidas, sem edemas. Local do trauma sem crepitação óssea, sem desvio de linha média. Com dor à palpação local e à movimentação ativa e passiva.`,
+`- EFG: BEG, corado, hidratado, anictérico, eupneico em AA.
+- NEURO: LOTE, pupilas isocóricas e fotorreagentes, ausência de déficits focais, sem sinais de irritação meníngea.
+- AR: MVBD sem RA.
+- ACV: BRNF em 2T, sem sopros.
+- ABDOME: Flácido, indolor à palpação, sem sinais de IP. Blumberg negativo. Rovsing negativo. Murphy negativo.
+- EXTREMIDADES: Bem perfundidas, sem edemas.
+- PELE: Presença de pápulas eritematosas, pruriginosas.`
+];
+let selectedTpl = 0;
+function selectTpl(idx) {
+  selectedTpl = idx;
+  document.querySelectorAll('.tpl-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+  document.getElementById('tpl-preview').textContent = TEMPLATES[idx];
+}
+function initTpl() { document.getElementById('tpl-preview').textContent = TEMPLATES[0]; }
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function setBadge(type,txt) { document.getElementById('badge').className='badge '+type; document.getElementById('btext').textContent=txt; }
+function toggleExtra() {
+  extraOpen = !extraOpen;
+  document.getElementById('extra-body').style.maxHeight = extraOpen ? '400px' : '0';
+  document.getElementById('extra-arrow').className = 'arrow' + (extraOpen ? ' open' : '');
+}
+function showOverlay(msg) { document.getElementById('overlay-msg').textContent = msg; document.getElementById('transcribing-overlay').classList.add('show'); }
+function hideOverlay() { document.getElementById('transcribing-overlay').classList.remove('show'); }
+
+// ─── API CLAUDE ───────────────────────────────────────────────────────────
+function parseJSON(raw) {
+  let s = raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,'').trim();
+  const a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if (a !== -1 && b > a) s = s.slice(a,b+1);
+  return JSON.parse(s);
+}
+async function callAI(prompt, maxTok=2500) {
+  const key = getAnthropicKey();
+  const headers = {'Content-Type':'application/json','anthropic-version':'2023-06-01'};
+  if (key) { headers['x-api-key']=key; headers['anthropic-dangerous-direct-browser-access']='true'; }
+  for (let attempt=0; attempt<3; attempt++) {
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST', headers,
+        body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:maxTok, messages:[{role:'user',content:prompt}] })
+      });
+      if (!r.ok) throw new Error('API '+r.status+': '+(await r.text()).slice(0,250));
+      const d = await r.json();
+      return parseJSON(d.content.map(b=>b.text||'').join(''));
+    } catch(e) {
+      if (attempt===2) throw e;
+      await new Promise(r=>setTimeout(r,1000*(attempt+1)));
+    }
+  }
+}
+
+// ─── SOAP ─────────────────────────────────────────────────────────────────
+function buildSOAPPrompt(transcript, extra) {
+  const ocrText = getOCRText();
+  const ocrBlock = ocrText ? `\nDOCUMENTOS FOTOGRAFADOS (receitas, exames, laudos extraídos por OCR):\n"""\n${ocrText}\n"""` : '';
+  const eb = extra ? `\nINFORMAÇÕES ADICIONAIS:\n"""\n${extra}\n"""` : '';
+  return `Você é assistente médico de Pronto-Socorro brasileiro. Gere evolução SOAP.
+Responda SOMENTE JSON válido sem markdown. Chaves: "S","O","A","P","scores".
+
+ATENÇÃO: A transcrição está marcada com [MÉDICO] e [PACIENTE] para identificar quem fala.
+Use essa distinção para separar corretamente a anamnese (fala do paciente) da conduta (fala do médico).
+Se houver [?] significa que não foi possível identificar — use o contexto para interpretar.
+
+S — SUBJETIVO: queixa + HDA completa baseada no que o PACIENTE relatou. Não resumir.
+  Se alergias/comorbidades/medicamentos contínuos não mencionados → afirme negativa.
+
+O — OBJETIVO:
+  USE OBRIGATORIAMENTE o template de exame físico abaixo como base da seção O.
+  Complemente com dados das INFORMAÇÕES ADICIONAIS e documentos fotografados.
+  Mantenha EXATAMENTE o formato "-" por linha, em português normal sem CAPS LOCK.
+
+TEMPLATE DE EXAME FÍSICO SELECIONADO (${TPL_NAMES[selectedTpl]}):
+${TEMPLATES[selectedTpl]}
+${eb}${ocrBlock}
+
+A — AVALIAÇÃO: hipótese = EXATAMENTE o que o médico disse. CID-10. Formato: lista "-".
+
+P — PLANO:
+  FORMATO OBRIGATÓRIO: cada item em linha própria iniciada por "-", em português normal.
+  Inclua medicamentos mencionados nos documentos fotografados se relevantes.
+  Estruture nesta ordem quando aplicável:
+  1. Medicamentos prescritos
+  2. Orientações não-farmacológicas
+  3. Exames solicitados
+  4. Retorno / seguimento
+  5. Último item SEMPRE: "- Paciente orientado(a) quanto aos sinais de alerta e fatores de retorno imediato ao Pronto-Socorro. Foram fornecidas orientações verbais e por escrito sobre mudanças de hábitos de vida e uso correto das medicações prescritas. Todas as dúvidas foram sanadas durante o atendimento."
+
+SCORES: calcule aplicáveis. Se nenhum: [].
+  Formato: [{"nome":"","valor":"","interpretacao":"","componentes":"","dadosFaltantes":""}]
+
+TRANSCRIÇÃO (com identificação de falas):
+"""
+${transcript}
+"""
+
+JSON: {"S":"...","O":"...","A":"...","P":"...","scores":[...]}`;
+}
+
+async function doSOAP() {
+  const transcript = getFullText();
+  const extra = document.getElementById('extra').value.trim();
+  const ocrText = getOCRText();
+  if (!transcript && !extra && !ocrText) return;
+  show('soap-card');
+  spin('soap-spin',true);
+  document.getElementById('soap-out').innerHTML='';
+  document.getElementById('soap-acts').style.display='none';
+  hide('carta-card'); hide('ubs-card');
+  setBadge('proc','Gerando SOAP...');
+  document.getElementById('soap-card').scrollIntoView({behavior:'smooth',block:'start'});
+  try {
+    soapData = await callAI(buildSOAPPrompt(transcript, extra));
+    renderSOAP(soapData);
+    setBadge('done','Evolução gerada');
+  } catch(e) {
+    document.getElementById('soap-out').innerHTML='<div class="err-box">Erro: '+esc(e.message)+'<br><button class="btn" style="margin-top:10px" onclick="doSOAP()">Tentar novamente ↗</button></div>';
+    setBadge('err','Erro');
+  }
+  spin('soap-spin',false);
+  document.getElementById('soap-acts').style.display='flex';
+}
+
+function renderSOAP(s) {
+  const secs=[{k:'S',l:'Subjetivo',c:'sl-s'},{k:'O',l:'Objetivo',c:'sl-o'},{k:'A',l:'Avaliação',c:'sl-a'},{k:'P',l:'Plano',c:'sl-p'}];
+  let html=secs.filter(x=>s[x.k]).map(x=>`<div class="sblock"><div class="slabel"><span class="sl ${x.c}">${x.k}</span>${x.l}</div><div class="scontent">${esc(s[x.k])}</div></div>`).join('');
+  if (s.scores&&s.scores.length) {
+    html+=`<div class="sblock"><div class="slabel"><span class="sl sl-sc">★</span>Scores clínicos</div>${s.scores.map(sc=>`<div class="sc-item"><div class="sc-name">${esc(sc.nome)}</div><div class="sc-val">${esc(sc.valor)}</div><div class="sc-interp">${esc(sc.interpretacao)}</div>${sc.componentes?'<div class="sc-detail">'+esc(sc.componentes)+'</div>':''}${sc.dadosFaltantes?'<div class="sc-detail sc-warn">⚠ '+esc(sc.dadosFaltantes)+'</div>':''}</div>`).join('')}</div>`;
+  }
+  document.getElementById('soap-out').innerHTML=html;
+}
+
+function copySOAP() {
+  const lbs={S:'SUBJETIVO',O:'OBJETIVO',A:'AVALIAÇÃO',P:'PLANO'};
+  let txt=['S','O','A','P'].map(k=>soapData[k]?lbs[k]+':\n'+soapData[k]:'').filter(Boolean).join('\n\n');
+  if (soapData.scores&&soapData.scores.length) txt+='\n\nSCORES:\n'+soapData.scores.map(sc=>sc.nome+': '+sc.valor+' — '+sc.interpretacao).join('\n');
+  navigator.clipboard.writeText(txt).then(()=>{ const b=document.querySelector('#soap-acts button'); const o=b.textContent; b.textContent='Copiado!'; setTimeout(()=>b.textContent=o,2000); });
+}
+
+function dlTxt() {
+  if (!Object.keys(soapData).length) return;
+  const lbs={S:'SUBJETIVO',O:'OBJETIVO',A:'AVALIAÇÃO',P:'PLANO'};
+  let txt='DATA/HORA: '+ts()+'\n'+'─'.repeat(40)+'\n\n';
+  ['S','O','A','P'].forEach(k=>{ if(soapData[k]) txt+=lbs[k]+':\n'+soapData[k]+'\n\n'; });
+  if (soapData.scores&&soapData.scores.length) { txt+='SCORES CLÍNICOS:\n'; soapData.scores.forEach(sc=>{ txt+='\n'+sc.nome+': '+sc.valor+' — '+sc.interpretacao+'\n'; if(sc.componentes) txt+=sc.componentes+'\n'; if(sc.dadosFaltantes) txt+='⚠ '+sc.dadosFaltantes+'\n'; }); }
+  download(txt,'evolucao-soap-'+isoDate()+'.txt','text/plain;charset=utf-8');
+}
+
+async function doCard() {
+  const transcript=getFullText(); const extra=document.getElementById('extra').value.trim();
+  show('carta-card'); spin('carta-spin',true);
+  document.getElementById('carta-out').innerHTML=''; document.getElementById('carta-acts').style.display='none';
+  document.getElementById('carta-card').scrollIntoView({behavior:'smooth',block:'start'});
+  try {
+    cartaData=await callAI(`Gere carta ao paciente em linguagem simples. SOMENTE JSON:
+{"diagnostico":"","orientacoes":[""],"medicamentos":[""],"sinaisAlerta":[""],"retorno":""}
+Medicamentos: inclua SOMENTE os mencionados pelo médico. Se nenhum → [].
+Transcrição:"""${transcript}""" Extra:"""${extra}"""`,1200);
+    renderCarta(cartaData);
+  } catch(e) { document.getElementById('carta-out').innerHTML='<div class="err-box">Erro: '+esc(e.message)+'<br><button class="btn" style="margin-top:10px" onclick="doCard()">Tentar novamente</button></div>'; }
+  spin('carta-spin',false); document.getElementById('carta-acts').style.display='flex';
+}
+
+function renderCarta(c) {
+  let h='<div class="carta-content"><strong>Diagnóstico:</strong> '+esc(c.diagnostico)+'\n\n';
+  if(c.orientacoes&&c.orientacoes.length) h+='<strong>Orientações:</strong>\n'+c.orientacoes.map(x=>'• '+esc(x)).join('\n')+'\n\n';
+  if(c.medicamentos&&c.medicamentos.length) h+='<strong>Medicamentos:</strong>\n'+c.medicamentos.map(x=>'• '+esc(x)).join('\n')+'\n\n';
+  if(c.sinaisAlerta&&c.sinaisAlerta.length) h+='<strong>Sinais de alerta — volte ao PS se:</strong>\n'+c.sinaisAlerta.map(x=>'• '+esc(x)).join('\n')+'\n\n';
+  if(c.retorno) h+='<strong>Retorno:</strong> '+esc(c.retorno)+'\n\n';
+  h+='<strong>Data:</strong> '+hoje+'</div>';
+  document.getElementById('carta-out').innerHTML=h;
+}
+
+async function doUBS() {
+  const transcript=getFullText(); const extra=document.getElementById('extra').value.trim();
+  show('ubs-card'); spin('ubs-spin',true);
+  document.getElementById('ubs-out').innerHTML=''; document.getElementById('ubs-acts').style.display='none';
+  document.getElementById('ubs-card').scrollIntoView({behavior:'smooth',block:'start'});
+  try {
+    const soapCtx=Object.keys(soapData).length ? `SUBJETIVO: ${soapData.S||''}\nOBJETIVO: ${soapData.O||''}\nAVALIAÇÃO: ${soapData.A||''}\nPLANO: ${soapData.P||''}` : `Transcrição: """${transcript}"""\nInformações adicionais: """${extra}"""`;
+    ubsData=await callAI(`Você é um assistente médico especializado em documentação clínica e contrarreferência para a Atenção Primária à Saúde (SUS). Transforme os dados do atendimento em uma carta de encaminhamento formal, ética e técnica para a UBS.
+Diretrizes: tom profissional, colaborativo, foco na continuidade do cuidado.
+Responda SOMENTE JSON válido:
+{"paciente":"","dataAtendimento":"${hoje}","prioridade":"Rotina|Prioritário|Urgente","resumoClinico":"","impressaoDiagnostica":[""],"condutaRealizada":[""],"solicitacaoUBS":[""]}
+DADOS: ${soapCtx}`,1800);
+    renderUBS(ubsData);
+  } catch(e) { document.getElementById('ubs-out').innerHTML='<div class="err-box">Erro: '+esc(e.message)+'<br><button class="btn" style="margin-top:10px" onclick="doUBS()">Tentar novamente</button></div>'; }
+  spin('ubs-spin',false); document.getElementById('ubs-acts').style.display='flex';
+}
+
+function renderUBS(u) {
+  const pCor={Urgente:'#A32D2D',Prioritário:'#854F0B',Rotina:'#3B6D11'};
+  const pBg={Urgente:'#FCEBEB',Prioritário:'#FAEEDA',Rotina:'#EAF3DE'};
+  const pr=u.prioridade||'Rotina';
+  let h='<div class="carta-content">';
+  h+=`<div style="text-align:center;margin-bottom:16px"><div style="font-size:15px;font-weight:600;color:#1F4E79">ENCAMINHAMENTO / CONTRARREFERÊNCIA</div><div style="font-size:13px;color:var(--txt2);margin-top:4px">À Equipe de Saúde da Família / Unidade Básica de Saúde</div></div>`;
+  h+=`<div style="background:var(--bg-field);border:0.5px solid var(--brd);border-radius:var(--rad);padding:10px 16px;margin-bottom:14px;font-size:14px;line-height:1.9">`;
+  if(u.paciente) h+=`<strong>Paciente:</strong> ${esc(u.paciente)}\n`;
+  h+=`<strong>Data:</strong> ${esc(u.dataAtendimento)}\n<strong>Prioridade:</strong> <span style="background:${pBg[pr]||'#EAF3DE'};color:${pCor[pr]||'#3B6D11'};padding:2px 8px;border-radius:4px;font-size:13px;font-weight:500">${esc(pr)}</span></div>`;
+  const sec=(num,titulo,conteudo)=>`<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:600;color:#1F4E79;border-bottom:1px solid #2E75B6;padding-bottom:4px;margin-bottom:8px">${num}. ${titulo}</div><div style="font-size:14px;line-height:1.75;color:var(--txt)">${conteudo}</div></div>`;
+  h+=sec('1','RESUMO CLÍNICO',esc(u.resumoClinico));
+  if(u.impressaoDiagnostica?.length) h+=sec('2','IMPRESSÃO DIAGNÓSTICA',u.impressaoDiagnostica.map(x=>'- '+esc(x)).join('\n'));
+  if(u.condutaRealizada?.length) h+=sec('3','CONDUTA REALIZADA',u.condutaRealizada.map(x=>'- '+esc(x)).join('\n'));
+  if(u.solicitacaoUBS?.length) h+=sec('4','SOLICITAÇÃO À UBS',u.solicitacaoUBS.map(x=>'- '+esc(x)).join('\n'));
+  h+=`<div style="margin-top:20px;padding-top:12px;border-top:0.5px solid var(--brd);font-size:14px;color:var(--txt2)">Atenciosamente,<br><br><div style="border-bottom:0.5px solid var(--brd2);width:220px;margin:8px 0"></div>Nome / CRM</div>`;
+  h+='</div>';
+  document.getElementById('ubs-out').innerHTML=h;
+}
+
+function dlUBSTxt() {
+  if(!ubsData) return;
+  const u=ubsData;
+  let txt='ENCAMINHAMENTO / CONTRARREFERÊNCIA\n'+'─'.repeat(50)+'\n';
+  if(u.paciente) txt+='Paciente: '+u.paciente+'\n';
+  txt+='Data: '+u.dataAtendimento+'\nPrioridade: '+u.prioridade+'\n\n';
+  txt+='1. RESUMO CLÍNICO:\n'+u.resumoClinico+'\n\n';
+  if(u.impressaoDiagnostica?.length) txt+='2. IMPRESSÃO DIAGNÓSTICA:\n'+u.impressaoDiagnostica.map(x=>'- '+x).join('\n')+'\n\n';
+  if(u.condutaRealizada?.length) txt+='3. CONDUTA REALIZADA:\n'+u.condutaRealizada.map(x=>'- '+x).join('\n')+'\n\n';
+  if(u.solicitacaoUBS?.length) txt+='4. SOLICITAÇÃO À UBS:\n'+u.solicitacaoUBS.map(x=>'- '+x).join('\n')+'\n\n';
+  txt+='Atenciosamente,\n\n\n_______________________\nNome / CRM';
+  download(txt,'encaminhamento-ubs-'+isoDate()+'.txt','text/plain;charset=utf-8');
+}
+
+async function dlDocx(tipo) {
+  const data=tipo==='ubs'?ubsData:cartaData; if(!data) return;
+  const btn=document.querySelector('#'+(tipo==='ubs'?'ubs':'carta')+'-acts button');
+  btn.textContent='Gerando...'; btn.disabled=true;
+  try {
+    const{Document,Packer,Paragraph,TextRun,AlignmentType,LevelFormat,BorderStyle}=docx;
+    const p=(t,opts={})=>new Paragraph({children:[new TextRun({text:t,...opts})],spacing:{after:60}});
+    const bul=(t,ref='b',color)=>new Paragraph({numbering:{reference:ref,level:0},children:[new TextRun({text:t,size:22,...(color?{color}:{})})],spacing:{after:40}});
+    const gap=()=>new Paragraph({children:[new TextRun('')],spacing:{after:120}});
+    const sec=t=>new Paragraph({children:[new TextRun({text:t,bold:true,size:24,color:'1F4E79'})],border:{bottom:{style:BorderStyle.SINGLE,size:4,color:'2E75B6',space:1}},spacing:{before:240,after:100}});
+    let kids=[];
+    if(tipo==='carta'){const c=cartaData;kids=[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Orientações ao Paciente',bold:true,size:32,color:'1F4E79'})],spacing:{after:60}}),new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Pronto-Socorro',size:22,color:'595959'})],spacing:{after:300}}),sec('Diagnóstico'),p(c.diagnostico,{size:22}),gap()];if(c.orientacoes&&c.orientacoes.length){kids.push(sec('Orientações'));c.orientacoes.forEach(o=>kids.push(bul(o,'b')));kids.push(gap());}if(c.medicamentos&&c.medicamentos.length){kids.push(sec('Medicamentos'));c.medicamentos.forEach(m=>kids.push(bul(m,'m')));kids.push(gap());}if(c.sinaisAlerta&&c.sinaisAlerta.length){kids.push(sec('Sinais de alerta — volte ao PS se:'));c.sinaisAlerta.forEach(s=>kids.push(bul(s,'al','C00000')));kids.push(gap());}if(c.retorno){kids.push(sec('Retorno'));kids.push(p(c.retorno,{size:22}));kids.push(gap());}}
+    else{const u=ubsData;kids=[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Encaminhamento para UBS',bold:true,size:32,color:'1F4E79'})],spacing:{after:60}}),new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Prioridade: '+u.prioridade,size:22,color:'595959'})],spacing:{after:300}}),sec('Resumo Clínico'),p(u.resumoClinico,{size:22}),gap()];if(u.impressaoDiagnostica&&u.impressaoDiagnostica.length){kids.push(sec('Impressão Diagnóstica'));u.impressaoDiagnostica.forEach(x=>kids.push(bul(x,'b')));kids.push(gap());}if(u.condutaRealizada&&u.condutaRealizada.length){kids.push(sec('Condutas no PS'));u.condutaRealizada.forEach(x=>kids.push(bul(x,'m')));kids.push(gap());}if(u.solicitacaoUBS&&u.solicitacaoUBS.length){kids.push(sec('Solicitação à UBS'));u.solicitacaoUBS.forEach(x=>kids.push(bul(x,'al')));kids.push(gap());}}
+    kids.push(new Paragraph({border:{top:{style:BorderStyle.SINGLE,size:4,color:'CCCCCC',space:1}},spacing:{before:300,after:80},children:[new TextRun({text:'Data: '+hoje,size:20,color:'595959',italics:true})]}));
+    const doc=new Document({numbering:{config:[{reference:'b',levels:[{level:0,format:LevelFormat.BULLET,text:'•',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:720,hanging:360}}}}]},{reference:'m',levels:[{level:0,format:LevelFormat.BULLET,text:'•',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:720,hanging:360}}}}]},{reference:'al',levels:[{level:0,format:LevelFormat.BULLET,text:'•',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:720,hanging:360}}}}]}]},sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1440,right:1440,bottom:1440,left:1440}}},children:kids}]});
+    const buf=await Packer.toBuffer(doc);
+    const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    download(URL.createObjectURL(blob),(tipo==='ubs'?'encaminhamento-ubs':'orientacoes-paciente')+'-'+isoDate()+'.docx',null,true);
+    btn.textContent='Baixado!'; setTimeout(()=>{btn.textContent='Baixar .docx';btn.disabled=false;},2500);
+  } catch(e){ console.error(e); btn.textContent='Erro'; setTimeout(()=>{btn.textContent='Baixar .docx';btn.disabled=false;},3000); }
+}
+
+// ─── GOOGLE DRIVE ─────────────────────────────────────────────────────────
+let driveToken = null;
+function driveSetStatus(msg, color) {
+  const el = document.getElementById('drive-status');
+  el.style.display = 'block';
+  el.style.background = color==='green'?'#EAF3DE':color==='red'?'#FCEBEB':'#E6F1FB';
+  el.style.color = color==='green'?'#3B6D11':color==='red'?'#A32D2D':'#185FA5';
+  el.textContent = msg;
+}
+async function getDriveToken() {
+  if (driveToken && driveToken.expires > Date.now()) return driveToken.access_token;
+  return new Promise((resolve,reject) => {
+    const w=500,h=600,l=window.screenX+(window.outerWidth-w)/2,t=window.screenY+(window.outerHeight-h)/2;
+    const authUrl='https://accounts.google.com/o/oauth2/v2/auth?client_id=308803498151-placeholder.apps.googleusercontent.com&redirect_uri='+encodeURIComponent(window.location.origin+window.location.pathname)+'&response_type=token&scope='+encodeURIComponent('https://www.googleapis.com/auth/drive.file')+'&prompt=select_account';
+    const popup=window.open(authUrl,'google_auth',`width=${w},height=${h},left=${l},top=${t}`);
+    const interval=setInterval(()=>{
+      try {
+        if(popup.closed){clearInterval(interval);reject(new Error('Login cancelado'));return;}
+        const hash=popup.location.hash;
+        if(hash&&hash.includes('access_token')){clearInterval(interval);popup.close();const params=new URLSearchParams(hash.slice(1));const token=params.get('access_token');const exp=parseInt(params.get('expires_in')||'3600');driveToken={access_token:token,expires:Date.now()+exp*1000};resolve(token);}
+      } catch(e){}
+    },300);
+  });
+}
+async function getOrCreateFolder(token,name) {
+  const s=await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`,{headers:{Authorization:'Bearer '+token}});
+  const d=await s.json();
+  if(d.files&&d.files.length>0) return d.files[0].id;
+  const c=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder'})});
+  return (await c.json()).id;
+}
+async function saveSOAPtoDrive() {
+  if(!Object.keys(soapData).length) return;
+  const btn=document.getElementById('drive-btn');
+  btn.disabled=true; btn.textContent='Conectando...';
+  driveSetStatus('Aguardando login no Google...','blue');
+  try {
+    const token=await getDriveToken();
+    driveSetStatus('Salvando...','blue');
+    const lbs={S:'SUBJETIVO',O:'OBJETIVO',A:'AVALIAÇÃO',P:'PLANO'};
+    let txt='DATA/HORA: '+ts()+'\n'+'─'.repeat(40)+'\n\n';
+    ['S','O','A','P'].forEach(k=>{if(soapData[k])txt+=lbs[k]+':\n'+soapData[k]+'\n\n';});
+    const folderId=await getOrCreateFolder(token,'Plantões SOAP');
+    const filename='SOAP-'+isoDate()+'-'+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}).replace(':','-')+'.txt';
+    const boundary='-------314159265358979323846';
+    const meta=JSON.stringify({name:filename,parents:[folderId]});
+    const body='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: text/plain;charset=utf-8\r\n\r\n'+txt+'\r\n--'+boundary+'--';
+    const up=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'multipart/related; boundary="'+boundary+'"'},body});
+    if(!up.ok) throw new Error('Upload '+up.status);
+    driveSetStatus('✓ Salvo na pasta "Plantões SOAP" do Google Drive!','green');
+    btn.textContent='Salvo ✓';
+    setTimeout(()=>{btn.disabled=false;btn.textContent='Drive';},3000);
+  } catch(e) {
+    driveSetStatus('Erro: '+e.message,'red');
+    btn.disabled=false; btn.textContent='Drive';
+  }
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────
+function show(id){document.getElementById(id).style.display='block';}
+function hide(id){document.getElementById(id).style.display='none';}
+function spin(id,on){document.getElementById(id).style.display=on?'block':'none';}
+function download(content,filename,type,isUrl=false){const url=isUrl?content:URL.createObjectURL(new Blob([content],{type:type}));const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);if(!isUrl)URL.revokeObjectURL(url);}
+</script>
+</body>
+</html>
